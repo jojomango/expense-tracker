@@ -12,8 +12,8 @@
 | Phase | 名稱 | 狀態 | PR |
 |---|---|---|---|
 | 0 | 地基 | ✅ DONE | — |
-| 1 | Domain：金額與時間 | **NEXT** | |
-| 2 | Domain：實體與預算計算 | ⬜ TODO | |
+| 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
+| 2 | Domain：實體與預算計算 | **NEXT** | |
 | 3 | 持久層與匯出匯入 | ⬜ TODO | |
 | 4 | 基礎 UI：錢包與交易 CRUD | ⬜ TODO | |
 | 5 | 預算與即時餘額 | ⬜ TODO | |
@@ -46,7 +46,7 @@
 
 ---
 
-## Phase 1 — Domain：金額與時間 **NEXT**
+## Phase 1 — Domain：金額與時間 ✅ DONE
 
 **目標：** 建立 `Money` 與 `Week` 兩個純模組。全部是純函式，**不碰任何 UI**。
 
@@ -93,9 +93,50 @@
   正確做法是對字串做整數解析。
 - `percentOf` 分母為 0 時必須回傳 `0`，不是 `NaN`（T1.3.7）。
 
+### 交接筆記
+
+**產出：** `src/domain/currency.ts`、`src/domain/money.ts`、`src/domain/week.ts`，
+共 54 個新測試（T1.1~T1.3、T2.1~T2.5 全數涵蓋），domain 覆蓋率 97.87%（門檻 90%）。
+`npm run verify` 與 `npm run e2e` 皆綠燈（E2E 沿用 Phase 0 的 smoke test，本 phase 未動 UI）。
+
+**API 設計決策：**
+- `Money` 是純資料物件 `{ amount: number, currency: CurrencyCode }`，**不是 class**。
+  `Money.of(amount, currency)` 是唯一的建構入口（掛在 `Money` 這個 const 物件上），
+  其餘運算（`parse`、`format`、`add`、`subtract`、`sum`、`percentOf`）都是自由函式，
+  吃 `Money` 純值、吐 `Money` 純值 —— 沒有方法鏈（不是 `money.add(...)`）。
+  Phase 2 若要在 `Wallet`/`Transaction` 用到金額運算，請 import 這些自由函式。
+- `sum(monies, currency)` 的 `currency` 參數是**必填**，即使陣列不為空也要傳，
+  用意是讓「空陣列該回傳什麼幣別的 0」永遠有明確答案，也順便驗證陣列內每筆幣別一致。
+- `percentOf(part, whole)` 我額外加了「幣別必須相同」的檢查（TESTCASES 沒明講，
+  但比照 `add`/`subtract` 禁止跨幣運算的精神）。分母為 0 回傳 `0`。
+- `groupByWeek` 回傳的分組陣列是**組間依週首倒序**（最新的週在前），
+  組內依日期**正序**。這個順序是我從 T2.5.1 的敘述反推的設計，Phase 2/4 若要疊加
+  「同一週內同一天再依 `createdAt` 排序」，可以在 `groupByWeek` 呼叫端自行二次排序，
+  不需要改 `week.ts` 本身。
+- 日期運算全部走 `Date.UTC` + 字串 regex 手動拆解 `YYYY-MM-DD`，
+  刻意不用 `date.split('-').map(Number)` 解構（在 `noUncheckedIndexedAccess` 下型別會是
+  `number | undefined`，過不了 typecheck）。Phase 2 若還要寫日期相關函式，
+  照抄 `week.ts` 裡 `ISO_DATE_RE` 的手法即可。
+
+**已知但不影響 Phase 1 驗收的小坑（留給 Phase 2 注意）：**
+- `Money.of` / `parse` 對未知幣別代碼一律拋錯（T1.1.6、對照 `currency.ts` 的固定 20 種表）。
+  但 SPEC.md §7 D6 說 Wallet 的幣別「內建 20 種 + 使用者自訂代碼」都要能設。
+  這兩者目前**不衝突**（T1.1.6 測的是 Money 層行為，沒說 Wallet 層不能有自訂幣別），
+  但 Phase 2 設計 `Wallet` 時要想清楚：自訂幣別代碼要怎麼決定小數位數？
+  可能需要在 `currency.ts` 加一個 `registerCurrency` 之類的擴充點，或是要求
+  使用者在建立自訂幣別時一併輸入小數位數。這不算「規格矛盾」，先寫下來提醒。
+- `npm run e2e` 在本機驗證時，容器內建瀏覽器版本（`/opt/pw-browsers`，Chromium 1194）
+  與 `@playwright/test` 目前釘的版本（1.49.1 → 期待 Chromium 1234）有落差，
+  直接 `npm run e2e` 會找不到 executable。CI 上因為會自己 `playwright install`，
+  版本會對齊，不受影響；本機/沙盒驗證時用一個**未提交**的 `playwright.local.config.ts`
+  加 `launchOptions.executablePath: '/opt/pw-browsers/chromium'` 繞過即可，
+  驗完就刪掉，不要把這個 workaround 提交進 repo。
+
+**沒有需要人類決策的事項** —— T1.x / T2.x 測案與規格完全一致，沒有矛盾或缺漏。
+
 ---
 
-## Phase 2 — Domain：實體與預算計算 ⬜ TODO
+## Phase 2 — Domain：實體與預算計算 **NEXT**
 
 實作 `Wallet` / `Transaction` / `Category` 型別與驗證，以及
 `calculateWeeklyBalance`、`calculateTotalBalance`、`summarizeByCategory`。
