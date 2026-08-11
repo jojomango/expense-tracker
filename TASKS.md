@@ -12,7 +12,7 @@
 | Phase | 名稱 | 狀態 | PR |
 |---|---|---|---|
 | 0 | 地基 | ✅ DONE | — |
-| 1 | Domain：金額與時間 | ✅ DONE | (PR 建立中) |
+| 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
 | 2 | Domain：實體與預算計算 | **NEXT** | |
 | 3 | 持久層與匯出匯入 | ⬜ TODO | |
 | 4 | 基礎 UI：錢包與交易 CRUD | ⬜ TODO | |
