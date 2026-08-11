@@ -13,7 +13,7 @@
 |---|---|---|---|
 | 0 | 地基 | ✅ DONE | — |
 | 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
-| 2 | Domain：實體與預算計算 | ✅ DONE | |
+| 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
 | 3 | 持久層與匯出匯入 | **NEXT** | |
 | 4 | 基礎 UI：錢包與交易 CRUD | ⬜ TODO | |
 | 5 | 預算與即時餘額 | ⬜ TODO | |
