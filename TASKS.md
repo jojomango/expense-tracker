@@ -13,8 +13,8 @@
 |---|---|---|---|
 | 0 | 地基 | ✅ DONE | — |
 | 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
-| 2 | Domain：實體與預算計算 | **NEXT** | |
-| 3 | 持久層與匯出匯入 | ⬜ TODO | |
+| 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
+| 3 | 持久層與匯出匯入 | **NEXT** | |
 | 4 | 基礎 UI：錢包與交易 CRUD | ⬜ TODO | |
 | 5 | 預算與即時餘額 | ⬜ TODO | |
 | 6 | 分類與統計 | ⬜ TODO | |
@@ -136,7 +136,7 @@
 
 ---
 
-## Phase 2 — Domain：實體與預算計算 **NEXT**
+## Phase 2 — Domain：實體與預算計算 ✅ DONE
 
 實作 `Wallet` / `Transaction` / `Category` 型別與驗證，以及
 `calculateWeeklyBalance`、`calculateTotalBalance`、`summarizeByCategory`。
@@ -144,6 +144,85 @@
 對應測案：**T3.1 ~ T3.5**
 
 關鍵：SPEC.md 決策 **D1 — 預算餘額只計算支出，不扣除收入**。
+
+### 驗收條件
+
+- [x] T3.1 ~ T3.5 全數通過，測試名稱含測案編號
+- [x] `npm run verify` 通過，domain 覆蓋率 98.69%（門檻 90%）
+- [x] `npm run e2e` 通過（本 phase 未動 UI，沿用 Phase 0 smoke test）
+- [x] `src/domain/` 仍然零外部依賴
+
+### 交接筆記
+
+**產出：** `src/domain/wallet.ts`、`src/domain/transaction.ts`、`src/domain/category.ts`、
+`src/domain/budget.ts`，共新增 44 個測試（T3.1~T3.5 全數涵蓋 27 個，另補 17 個
+entity 驗證測試，非 TESTCASES 契約項目但遵循「可新增、不可刪減」原則）。
+`npm run verify` 與 `npm run e2e` 皆綠燈。
+
+**API 設計決策：**
+
+- **`Wallet.budgetAmount: number | null`**——`budgetMode = 'none'` 時必須是 `null`，
+  `'weekly'` / `'total'` 時必須是非負整數。`validateWallet` 強制這條規則。
+- **`Transaction.categoryId: string | null`**——這是這個 phase 最重要的設計決策。
+  SPEC.md §3.3 說「刪除有交易的分類時，交易轉移到『未分類』」，但
+  `summarizeByCategory(transactions)` 的簽章只有一個參數（照 SPEC.md §6 Phase 2
+  段落原文），沒有分類清單可供比對「這個 categoryId 是否還存在」。
+  因此我讓 `categoryId` 型別本身允許 `null` 代表「未分類」，
+  T3.5.3 的測試直接建構 `categoryId: null` 的交易來模擬「分類已被刪除」後的狀態。
+  **這意味著實際的『刪除分類 → 交易的 categoryId 改成 null』這個轉換動作，
+  要留給 Phase 3（persistence）在刪除分類的 repository 操作裡完成**，
+  domain 層本身不做這個轉換（因為那需要知道「所有交易」與「分類是否存在」，
+  屬於資料庫操作而非純函式）。Phase 3 寫刪除分類的邏輯時要記得處理這一步。
+- **`summarizeByCategory` 回傳原始整數金額（`amount: number`），不是 `Money`。**
+  原因：`Transaction` 本身不存幣別（D2），`summarizeByCategory` 簽章只收
+  `transactions`，沒有 `currency` 參數可以建構 `Money`。所以假設呼叫端已經
+  保證傳入的交易屬於同一幣別（例如只傳同一個錢包的交易——目前唯一會用到
+  分類彙總的地方就是「單一錢包」的統計畫面，SPEC.md Phase 6 也是「本週／本月
+  分類支出佔比」，沒有跨錢包彙總的用例）。這個假設沒有寫成 runtime 檢查，
+  純粹是呼叫端責任。Phase 6 串接 UI 時記得只傳單一錢包的交易。
+- **`calculateWeeklyBalance` / `calculateTotalBalance` 在 `budgetMode` 不符時回傳 `null`**
+  （T3.3.1），而不是拋錯或回傳 0——呼叫端（UI）用 `null` 判斷是否要顯示餘額卡片。
+  另外新增了一個 SPEC.md 沒有明講函式名稱、但 T3.3.2 明確需要的
+  `calculateWeeklyExpenseTotal(wallet, transactions, weekStartDay, referenceDate)`，
+  回傳 `Money`，**不受 `budgetMode` 限制**（`none` 模式也能查）。
+  這是 SPEC §3.4「`none` 模式只顯示本週支出總額」的計算來源，Phase 5 串接主畫面時
+  `none` 模式請呼叫這個函式，不要呼叫 `calculateWeeklyBalance`（會拿到 `null`）。
+- 錢包隔離（T3.4）與幣別隔離不是靠呼叫端先過濾——`calculateWeeklyBalance` /
+  `calculateTotalBalance` / `calculateWeeklyExpenseTotal` 內部都用
+  `transactions.filter(t => t.walletId === wallet.id && t.type === 'expense')`
+  自己過濾。呼叫端可以放心傳全部交易進去，不需要事先篩選。
+  這也代表**目前不存在、也不應該存在**任何「跨錢包加總」的 API（T3.4.3）。
+- `budget.ts` 的 `percentOf` 直接復用 Phase 1 的 `money.ts`，分母（budget）為 0 時
+  回傳 `0`（T3.2.6），沿用 Phase 1 已經做好的邊界處理，沒有重新造輪子。
+
+**已知但不影響本 phase 驗收的坑（留給後續 phase 注意）：**
+
+- **自訂幣別（D6）尚未解決。** Phase 1 交接筆記就提過這件事，這個 phase
+  沒有進一步解決，因為 T3.x 測案只用 TWD／JPY（兩者都是內建的 20 種幣別之一），
+  沒有測案逼你處理自訂幣別。但 `calculateWeeklyBalance` / `calculateTotalBalance`
+  內部呼叫 `Money.of(wallet.budgetAmount, wallet.currency)`，如果 `wallet.currency`
+  是使用者自訂、不在 `currency.ts` 20 種清單內的代碼，會直接拋錯
+  （`money.ts` 的 `assertKnownCurrency`）。**Phase 3／4 若要支援自訂幣別，
+  必須先在 `currency.ts` 解決「自訂幣別的小數位數怎麼決定」，否則自訂幣別的
+  錢包一旦設了預算，餘額計算會直接炸掉。** 這不算規格矛盾（規格沒說要在
+  Phase 2 解決），但這是目前最大的一顆未拆的坑，再往後拖會拖到 UI 層才爆炸，
+  屆時除錯成本更高。
+- `validateWallet` / `validateTransaction` / `validateCategory` 是我主動加的，
+  TESTCASES.md 沒有對應編號的測案（只有 TASKS.md 文字提到「型別與驗證規則」）。
+  我補了測試但沒有假造 T 編號，測試名稱是描述性中文，不是 `Txx.x.x` 格式。
+  這批驗證邏輯很簡的：只檢查「型別不變式」（金額正負、budgetMode 與
+  budgetAmount 的搭配），**沒有做 UUID 格式驗證、沒有做 categoryId 參照完整性
+  檢查**（因為那需要查資料庫，屬於 Phase 3 persistence 或 repository 層的責任）。
+- `id` / `createdAt` / `updatedAt` 這三個欄位這個 phase 完全沒有處理產生邏輯
+  （沒有 `crypto.randomUUID()`，也沒有時間戳產生函式）。理由：domain 層
+  不該自己取「現在時間」或亂數（違反 CLAUDE.md「時間當參數傳入」的慣例，
+  UUID 產生也是一種需要注入的外部能力）。**這些留給 Phase 3 的
+  repository／persistence 層在寫入資料庫時產生**，domain 層的型別只描述
+  「一個完整的實體長什麼樣子」，不負責造出它。
+
+**沒有需要人類決策的事項** —— T3.x 測案與規格完全一致，沒有矛盾或缺漏。
+唯一值得注意的是上面提到的「自訂幣別小數位數」這顆坑，但這不是矛盾，
+是規格本來就沒細講、需要之後某個 phase 做設計決定的地方，先記錄不需要現在打斷。
 
 ---
 
