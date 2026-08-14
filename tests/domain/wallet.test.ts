@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { validateWallet, type Wallet } from '../../src/domain/wallet'
+import {
+  validateWallet,
+  assertCanDeleteWallet,
+  LastWalletError,
+  type Wallet,
+} from '../../src/domain/wallet'
 
 const baseWallet: Wallet = {
   id: 'w1',
@@ -47,5 +52,19 @@ describe('Wallet — 型別與驗證規則', () => {
 
   it('名稱為空字串時拋錯', () => {
     expect(() => validateWallet({ ...baseWallet, name: '  ' })).toThrow(RangeError)
+  })
+})
+
+describe('assertCanDeleteWallet — 刪除錢包前的規則檢查（SPEC.md §3.1，支援 T4.1.3）', () => {
+  it('刪除前只剩 1 個錢包時拋出 LastWalletError', () => {
+    expect(() => assertCanDeleteWallet(1)).toThrow(LastWalletError)
+  })
+
+  it('刪除前有 0 個錢包（不應發生，但仍視為不可刪除）時拋錯', () => {
+    expect(() => assertCanDeleteWallet(0)).toThrow(LastWalletError)
+  })
+
+  it('刪除前有 2 個以上錢包時不拋錯', () => {
+    expect(() => assertCanDeleteWallet(2)).not.toThrow()
   })
 })

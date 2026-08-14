@@ -56,3 +56,19 @@ export const DEFAULT_CATEGORIES: readonly DefaultCategorySeed[] = [
   ...DEFAULT_EXPENSE_CATEGORIES,
   ...DEFAULT_INCOME_CATEGORIES,
 ]
+
+/**
+ * 分類被刪除時，把引用該分類的交易 `categoryId` 改為 `null`（未分類），
+ * 交易本身不連帶刪除（SPEC.md §3.3）。
+ *
+ * 泛型只要求 `categoryId` 欄位，刻意不 import `Transaction`型別——
+ * 避免 `category.ts` 反過來依賴 `transaction.ts`，維持 domain 內部模組間的單向依賴。
+ */
+export function reassignDeletedCategory<T extends { categoryId: string | null }>(
+  transactions: readonly T[],
+  deletedCategoryId: string,
+): T[] {
+  return transactions.map((t) =>
+    t.categoryId === deletedCategoryId ? { ...t, categoryId: null } : t,
+  )
+}
