@@ -14,8 +14,8 @@
 | 0 | 地基 | ✅ DONE | — |
 | 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
 | 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
-| 3 | 持久層與匯出匯入 | 🚧 WIP | [#3](https://github.com/jojomango/expense-tracker/pull/3)（draft，待審） |
-| 4 | 基礎 UI：錢包與交易 CRUD | ⬜ TODO | |
+| 3 | 持久層與匯出匯入 | ✅ DONE | [#3](https://github.com/jojomango/expense-tracker/pull/3) |
+| 4 | 基礎 UI：錢包與交易 CRUD | **NEXT** | |
 | 5 | 預算與即時餘額 | ⬜ TODO | |
 | 6 | 分類與統計 | ⬜ TODO | |
 | 7 | PWA、備份與打磨 | ⬜ TODO | |
@@ -226,7 +226,7 @@ entity 驗證測試，非 TESTCASES 契約項目但遵循「可新增、不可�
 
 ---
 
-## Phase 3 — 持久層與匯出匯入 🚧 WIP
+## Phase 3 — 持久層與匯出匯入 ✅ DONE
 
 Dexie schema + migration、Repository 介面（domain 定義、persistence 實作）、
 匯出／匯入與 schema 驗證。
