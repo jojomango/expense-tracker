@@ -36,3 +36,22 @@ export function validateWallet(wallet: Wallet): void {
     throw new RangeError(`budgetAmount 必須是非負整數: ${wallet.budgetAmount}`)
   }
 }
+
+/** 刪除最後一個錢包時拋出（SPEC.md §3.1：不可刪除最後一個錢包）。 */
+export class LastWalletError extends Error {
+  constructor() {
+    super('不可刪除最後一個錢包，至少須保留一個錢包')
+    this.name = 'LastWalletError'
+  }
+}
+
+/**
+ * 刪除錢包前的業務規則檢查（SPEC.md §3.1）。
+ * `walletCountBeforeDelete` 是刪除前的錢包總數；純函式，讓 persistence 層
+ * 在真正執行刪除前呼叫，不需要把「至少保留一個錢包」這條規則寫死在資料庫程式碼裡。
+ */
+export function assertCanDeleteWallet(walletCountBeforeDelete: number): void {
+  if (walletCountBeforeDelete <= 1) {
+    throw new LastWalletError()
+  }
+}

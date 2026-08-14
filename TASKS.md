@@ -14,7 +14,7 @@
 | 0 | 地基 | ✅ DONE | — |
 | 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
 | 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
-| 3 | 持久層與匯出匯入 | **NEXT** | |
+| 3 | 持久層與匯出匯入 | 🚧 WIP | |
 | 4 | 基礎 UI：錢包與交易 CRUD | ⬜ TODO | |
 | 5 | 預算與即時餘額 | ⬜ TODO | |
 | 6 | 分類與統計 | ⬜ TODO | |
@@ -226,12 +226,116 @@ entity 驗證測試，非 TESTCASES 契約項目但遵循「可新增、不可�
 
 ---
 
-## Phase 3 — 持久層與匯出匯入 ⬜ TODO
+## Phase 3 — 持久層與匯出匯入 🚧 WIP
 
 Dexie schema + migration、Repository 介面（domain 定義、persistence 實作）、
 匯出／匯入與 schema 驗證。
 
-對應測案：**T4.1 ~ T4.2**（用 `fake-indexeddb` 在 Node 環境測）
+對應測案：**T4.1 ~ T4.2**
+
+### 驗收條件
+
+- [x] T4.1.x ~ T4.2.x 全數通過，測試名稱含測案編號
+- [x] `npm run verify` 通過，domain 覆蓋率 96.1%（門檻 90%）
+- [x] `npm run e2e` 通過（本 phase 未動 UI，沿用 Phase 0 smoke test；本機沙盒需用
+      Phase 1 交接筆記提到的 `playwright.local.config.ts` workaround 驗證，驗完即刪除未提交）
+- [x] `src/domain/` 仍然零外部依賴（`check:domain` 通過，12 個 domain 檔案）
+- [ ] 部署後手動確認頁面正常（本 phase 未動 UI，沿用 Phase 0 畫面，未額外手動確認）
+
+### 交接筆記
+
+**產出：**
+- `src/domain/settings.ts` — `Settings` 型別與 `DEFAULT_SETTINGS`（SPEC.md §3.5）。
+- `src/domain/repository.ts` — `WalletRepository` / `TransactionRepository` /
+  `CategoryRepository` / `SettingsRepository` / `Repositories` 介面（純型別，無執行邏輯）。
+- `src/domain/backup.ts` — 備份資料的形狀、JSON 剖析、schema 驗證（含參照完整性）、
+  merge 邏輯。刻意留在 domain 而不是 persistence，因為這些是「這包資料合不合法」
+  的純判斷，不碰 IndexedDB，Android 版本也能原封不動複用。`JSON.parse` 是語言
+  內建能力不是外部套件，所以沒有違反零依賴。
+- `src/domain/wallet.ts` 新增 `LastWalletError` / `assertCanDeleteWallet`——
+  「不可刪除最後一個錢包」這條 SPEC.md §3.1 規則本身是純業務邏輯，讓 persistence
+  呼叫而不是寫死在 Dexie 程式碼裡。
+- `src/domain/category.ts` 新增 `reassignDeletedCategory`——Phase 2 交接筆記
+  提到的坑（分類刪除→交易轉移到未分類）在這個 phase 補上，是純函式。
+- `src/persistence/db.ts` — `AppDatabase`（Dexie 子類別），schema v1
+  （`wallets` / `transactions` / `categories` / `settingsTable` 四個 table），
+  `on('populate')` hook 首次開啟時建立 11 個預設分類與預設設定（不建立錢包，
+  建立第一個錢包是 Phase 4 首次啟動引導的責任）。
+- `src/persistence/repositories.ts` — 四個 Dexie repository 實作，
+  `createRepositories(db)` 工廠函式組成 `Repositories`。
+- `src/persistence/backup-repository.ts` — `createBackupRepository(db)`，
+  `exportData` / `importReplace` / `importMerge`。驗證永遠在任何 DB 寫入之前
+  完成，所以匯入失敗時保證資料庫還沒被動過，天然滿足 T4.2.3 的原子性，不需要
+  額外的 rollback。
+- 共新增 34 個測試（domain 23 個：settings 3、backup 17、wallet +3、category +4；
+  persistence 11 個），T4.1.1~T4.1.6、T4.2.1~T4.2.8 全數涵蓋。
+
+**API 設計決策：**
+
+- **Repository 的 `add` / `update` 接收「完整的」domain 實體**（含 `id` /
+  `createdAt` / `updatedAt`），不在 repository 內產生這些欄位。Phase 2 交接筆記
+  原本建議「留給 Phase 3 的 repository 在寫入時產生」，這個 phase 改了主意：
+  產生 `id`（`crypto.randomUUID()`）與時間戳的呼叫端，之後在 Phase 4 本來就需要
+  「現在時間」來處理 SPEC.md §3.2 的日期預設值（今天），把產生邏輯放在 repository
+  反而要多繞一層、還要幫 repository 額外做「now 要用參數注入」的介面設計。
+  現在的 repository 角色單純很多：原封不動存進去、原封不動讀出來。
+  **Phase 4 寫「新增交易／錢包」的 use case 時，記得自己產生 `id` 與
+  `createdAt`/`updatedAt`（用 `crypto.randomUUID()` 與注入的 `now: Date`）
+  再呼叫 `repos.transactions.add(...)`。**
+- **`Settings` 存成單例列**（`settingsTable`，固定 id `SETTINGS_ROW_ID`）。
+  `SettingsRepository.get()` 在還沒有任何設定列時回傳 `DEFAULT_SETTINGS`
+  （不拋錯），因為 app 第一次啟動、使用者還沒存過任何設定是正常狀態。
+- **`mergeBackups` 對沒有 `updatedAt` 的實體（`Wallet` / `Category`）的處理**：
+  SPEC.md §3.6 說 merge 衝突時「保留 `updatedAt` 較新者」，但目前只有
+  `Transaction` 有 `updatedAt` 欄位，`Wallet` / `Category` 沒有。這不算規格矛盾
+  （T4.2.5 / T4.2.6 的測案本身只用交易資料，沒有明確要求 Wallet/Category 的
+  merge 行為），但確實是規格沒講清楚的地方，我做了一個實作決策：
+  **id 衝突時，沒有 `updatedAt` 可比較的實體一律以匯入資料覆蓋現有資料。**
+  這個決策已經寫進 `backup.ts` 的 `mergeById` 註解與 `backup.test.ts` 的測試。
+  如果之後要幫 `Wallet` / `Category` 加 `updatedAt` 欄位讓 merge 語意完全一致，
+  請注意這會改動 Phase 2 已經合併的型別，屬於破壞性變更，建議之後某個 phase
+  一次做，不要臨時加。
+- **匯出格式**：`serializeBackup` 用 `JSON.stringify(data, null, 2)`（人類可讀），
+  但檔名產生（SPEC.md §3.6 的 `expense-backup-YYYYMMDD-HHmm.json`）與實際的
+  瀏覽器下載（Blob + `<a download>`）**留給 Phase 7**（UI 层的匯出／匯入按鈕），
+  這個 phase 只做到「給我一段文字，我存進 DB／從 DB 讀出一段文字」。
+- **T4.1.5（schema migration）目前是骨架**，不是真的 v1→v2 升級——因為現在
+  還只有 v1，沒有真正要升級的欄位。`tests/persistence/migration.test.ts` 用一個
+  獨立的、測試專用的 Dexie 定義（不是 `AppDatabase`）示範「先用 v1 寫資料、
+  再用一條 `.version(1)...version(2)` 的鏈重新開啟」資料仍然完整。**之後真的要
+  加 v2 schema 時**：在 `src/persistence/db.ts` 的 `AppDatabase` 建構子裡接著
+  `this.version(1)` 加一個 `.version(2).stores({...}).upgrade(tx => {...})`，
+  並把這個測試骨架換成針對真實欄位轉換的斷言（例如新增欄位的預設值）。
+- **`WalletRepository.remove` 與 `CategoryRepository.remove` 都用 Dexie 的
+  `db.transaction('rw', ...)` 包起來**，確保「刪除錢包＋刪除其交易」與
+  「刪除分類＋交易轉移未分類」在單一 IndexedDB transaction 內完成，不會有
+  「刪了一半」的中間狀態。
+- **T4.1.6（併發寫入同一筆交易）** 用 `Promise.all([repo.update(A), repo.update(B)])`
+  模擬，斷言最終資料完整等於 A 或 B 其中一個（不會欄位混雜）。Dexie 的 `put`
+  整筆覆蓋，IndexedDB 本身保證單一 record 的寫入是原子的，所以這題本質上是在
+  驗證「我們沒有自己手滑做欄位級別的 merge」，而不是在測 IndexedDB 本身。
+
+**已知但不影響本 phase 驗收的坑（留給後續 phase 注意）：**
+
+- **自訂幣別小數位數（D6）仍未解決**——Phase 1、Phase 2 交接筆記都提過。
+  這個 phase 的 `validateBackupData` 也一樣沒處理：如果匯入的錢包用了不在
+  `currency.ts` 20 種內建清單的自訂幣別代碼，`validateWallet` 本身不會擋
+  （它不檢查 currency 合法性），但只要那個錢包之後被拿去算預算餘額
+  （`Money.of(wallet.budgetAmount, wallet.currency)`），就會在 `money.ts` 炸開。
+  **建議在 Phase 4 設計「建立錢包」表單、或更早的某個 phase，先解決
+  `currency.ts` 要不要開放 `registerCurrency` 之類的擴充點**，不然這顆坑會一路
+  滾到使用者實際操作時才爆炸。
+- `AppDatabase` 建構子的 `name` 參數預設是 `'expense-tracker'`，Phase 4 組裝
+  真正的 app 時直接 `new AppDatabase()` 用預設值即可，不需要額外配置。
+- Playwright 本機驗證的 executable 版本落差（Phase 1 交接筆記提過的坑）
+  這次仍然存在：`npm run e2e` 在本機沙盒會找不到 Chromium 1234，需要用
+  `playwright.local.config.ts`（未提交）指定 `executablePath` 到
+  `/opt/pw-browsers/chromium` 才能跑，驗完即刪除。CI 環境不受影響。
+
+**沒有需要人類決策的事項** —— T4.x 測案與規格完全一致，沒有矛盾或缺漏。
+上面提到的「Wallet/Category merge 沒有 updatedAt 可比較」是規格沒講清楚的細節，
+已用合理預設值解決並記錄，不是阻塞性問題；「自訂幣別小數位數」是延續前兩個
+phase 就有的已知坑，同樣不阻塞本 phase 驗收，但建議不要再往後拖。
 
 ---
 
