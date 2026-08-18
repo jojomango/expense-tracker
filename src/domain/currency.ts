@@ -38,6 +38,9 @@ export function isKnownCurrency(code: string): code is CurrencyCode {
   return Object.prototype.hasOwnProperty.call(CURRENCIES, code)
 }
 
+/** 內建 20 種幣別代碼清單，供 UI 層建立幣別選單使用（SPEC.md §7 D6）。 */
+export const KNOWN_CURRENCIES: readonly CurrencyCode[] = Object.keys(CURRENCIES)
+
 function infoFor(code: string): CurrencyInfo {
   const info = CURRENCIES[code]
   if (!info) {
