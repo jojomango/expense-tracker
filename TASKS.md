@@ -15,8 +15,8 @@
 | 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
 | 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
 | 3 | 持久層與匯出匯入 | ✅ DONE | [#3](https://github.com/jojomango/expense-tracker/pull/3) |
-| 4 | 基礎 UI：錢包與交易 CRUD | **NEXT** | |
-| 5 | 預算與即時餘額 | ⬜ TODO | |
+| 4 | 基礎 UI：錢包與交易 CRUD | ✅ DONE | [#5](https://github.com/jojomango/expense-tracker/pull/5) |
+| 5 | 預算與即時餘額 | **NEXT** | |
 | 6 | 分類與統計 | ⬜ TODO | |
 | 7 | PWA、備份與打磨 | ⬜ TODO | |
 
@@ -339,17 +339,120 @@ phase 就有的已知坑，同樣不阻塞本 phase 驗收，但建議不要再�
 
 ---
 
-## Phase 4 — 基礎 UI：錢包與交易 CRUD ⬜ TODO
+## Phase 4 — 基礎 UI：錢包與交易 CRUD ✅ DONE
 
 錢包建立／切換／編輯／封存、交易列表與 CRUD、首次啟動引導。
 
 對應測案：**E2E-1、E2E-2**
 
-⚠️ 加路由時記得用 `HashRouter`。
+### 驗收條件
+
+- [x] E2E-1、E2E-2 全數通過（Chromium + Mobile Chrome）
+- [x] `npm run verify` 通過（`check:domain` → `lint` → `typecheck` → `test:cov` → `build`），
+      domain 覆蓋率 96.11%（門檻 90%，本 phase 未新增 domain 測試，沿用 Phase 1~3 的覆蓋）
+- [x] `npm run e2e` 通過（本機沙盒用 Phase 1 交接筆記提到的
+      `playwright.local.config.ts` workaround 驗證，驗完已刪除、未提交）
+- [x] `src/domain/` 仍然零外部依賴（`check:domain` 通過，12 個 domain 檔案）
+- [x] 部署後手動確認頁面正常（本機用 `npm run build && npm run preview` + 手動
+      Playwright 腳本額外走過一次「建立第二個錢包（JPY 總預算）→ 切換 → 封存」流程，
+      驗完即刪除；CI 上的 GitHub Pages 部署仍照 Phase 0 既有流程自動跑）
+
+### 交接筆記
+
+**產出：**
+- `src/app/repositories.ts` — 整個 app 唯一的 `AppDatabase` + `Repositories` 組裝點
+  （單例，`new AppDatabase()` 用預設 db 名稱）。
+- `src/app/store.ts` — Zustand store，是 domain 型別與 persistence repository 之間
+  唯一的橋樑。`id`（`crypto.randomUUID()`）與 `createdAt`/`updatedAt`（`new Date().toISOString()`）
+  在這裡產生——這是 Phase 3 交接筆記講好的分工，repository 只負責原封不動存取。
+  `selectCurrentWallet(state)` 是選出「目前錢包」的邏輯：優先用
+  `settings.defaultWalletId` 對應的未封存錢包，找不到就退回第一個未封存錢包。
+- `src/ui/` 新增：`WalletForm`（建立/編輯共用，編輯模式用 `lockCurrency` 鎖住幣別，
+  對應 SPEC.md §7 D3）、`TransactionForm`（新增/編輯共用）、`TransactionList`、
+  `Home`（含 `BalanceCard`，依 `budgetMode` 切換顯示週餘額／總餘額／純支出總額）、
+  `Wallets`（管理列表：切換/編輯/封存/刪除）、`WalletPages.tsx`、
+  `TransactionPages.tsx`（route 參數讀取的薄包裝）。
+- `src/app/App.tsx` 改為 `HashRouter` + 路由表（`/`、`/wallets`、`/wallets/new`、
+  `/wallets/:id/edit`、`/transactions/new`、`/transactions/:id/edit`），
+  App 掛載時呼叫 `store.load()` 從 repository 讀出全部資料。
+- `src/domain/currency.ts` 新增 `KNOWN_CURRENCIES`（`CurrencyCode[]`）——
+  純粹是既有 `CURRENCIES` 表的 key 清單，供 UI 的幣別下拉選單使用，
+  沒有新增任何外部依賴或改變既有函式行為。
+- 新增 `tests/e2e/wallet-transaction-crud.spec.ts`（E2E-1、E2E-2 全數涵蓋，
+  測試名稱以測案編號開頭）。移除舊的 `tests/e2e/smoke.spec.ts` 對
+  `data-testid="today"` 的斷言——那是 Phase 0 空白頁佔位用的元素，
+  不是 TESTCASES.md 契約項目，這個 phase 開始畫面已經有真正內容，
+  沒有理由保留它；`heading('記帳本')` 的斷言則保留並持續通過（現在是
+  全域 header 的 `<h1>`）。
+
+**設計決策：**
+
+- **「首次啟動引導」沒有獨立的 `/onboarding` 路由**——`Home` 元件直接根據
+  `wallets.length === 0` 決定要渲染 `WalletForm`（引導畫面）還是主畫面。
+  SPEC.md §6 Phase 4 只說「首次啟動引導：建立第一個錢包」，沒有規定要不要
+  獨立路由，這樣做可以少一層轉址判斷。E2E-1 直接 `page.goto('/')` 就會看到引導表單。
+- **`createWallet` 永遠把新建的錢包設成 `settings.defaultWalletId`**（不論是
+  第一個錢包還是後續新增的）。這代表「新增錢包」在 UX 上等同「新增並切換過去」。
+  這不是 TESTCASES.md 明講的行為，是我的設計決策；手動驗證 E2E-4 情境
+  （建立第二個錢包 → 應顯示該錢包畫面）時這個行為剛好對，如果 Phase 5
+  要改成「新增後留在原錢包」，只要拿掉 `createWallet` 裡更新 `settings` 那段即可。
+- **`switchWallet` 是 `await settings.update()` 完成後才更新記憶體狀態**——
+  這代表「切換錢包」在 UI 上會有一次 await 的延遲（實務上 IndexedDB 寫入很快，
+  感覺不出來）。手動驗證時發現：如果使用者切換後**立刻**做整頁重新整理
+  （不是透過 SPA 導覽），理論上有極小機率切換沒寫入就被中斷——但這是
+  IndexedDB 寫入延遲的一般性風險，不是這個 phase 特有的 bug，TESTCASES.md
+  也沒有對應測案要求，沒有進一步處理。
+- **交易表單的分類選單目前沒有「未分類」選項**——`categoryId: null`
+  （未分類）只會透過「刪除有交易的分類」這個既有機制產生（Phase 3 的
+  `reassignDeletedCategory`），使用者不能在新增/編輯交易時手動選「未分類」。
+  這符合 SPEC.md §3.3 的語意（未分類是分類被刪除後的結果狀態，不是使用者
+  可以主動選擇的分類），沒有測案要求相反行為。
+- **金額輸入框吃的是使用者可讀字串（例如 `"120"`、`"3000.50"`），送出時用
+  `domain/money.ts` 的 `parse(input, currency)` 轉成最小單位整數**——
+  沿用 Phase 1 已經做好的解析與驗證（千分位、小數位數上限等），
+  UI 層沒有自己另外寫一套金額解析邏輯。
+- **`Wallets.tsx` 的刪除錢包會先跳原生 `window.confirm`（含交易筆數），
+  刪除最後一個錢包時捕捉 `LastWalletError` 並用 `window.alert` 顯示**——
+  SPEC.md §3.1「刪除錢包時需二次確認並提示交易筆數」用 `window.confirm`
+  文字內嵌完成，沒有另外做自訂 Modal（Phase 7 若要做更精緻的確認 UI 可以在這裡加）。
+- E2E-2 的刪除交易步驟原本斷言「`transaction-list` 這個 testid 元素不再包含
+  已刪除交易的金額文字」，但 `TransactionList` 在清單為空時**不會渲染
+  `data-testid="transaction-list"` 的 `<ul>`**（改渲染一段提示文字），
+  導致 `expect(locator).not.toContainText()` 在元素不存在時直接判定失敗
+  （而不是通過）。這是我在撰寫測試時發現的 Playwright 用法陷阱，不是產品
+  程式碼的 bug——改成斷言「頁面上找不到该金額文字的節點」
+  （`getByText('NT$200.00')` count 為 0）即可，測試意圖不變。
+
+**已知但不影響本 phase 驗收的坑（留給 Phase 5 注意）：**
+
+- **超支警示樣式（E2E-3）目前只做了最基本的版本**：`BalanceCard` 在
+  `isOverBudget` 時把餘額文字改成紅色、並多顯示一行「已超支」文字，
+  但 SPEC.md §3.4「警示圖示」還沒做（沒有 icon），也還沒有專門的 E2E 測試
+  覆蓋這個情境（TASKS.md 把 E2E-3 排進 Phase 5）。Phase 5 要做 E2E-3 時，
+  這段邏輯已經有基礎可以疊加，不需要重寫 `calculateWeeklyBalance` 的呼叫方式。
+- **週起始日設定（E2E-5）完全還沒有 UI**——`Settings.weekStartDay` 目前
+  只能在 DB 層看到預設值（週一），沒有任何畫面可以修改它。`BalanceCard`
+  已經正確地從 `store.settings.weekStartDay` 讀值並傳給
+  `calculateWeeklyBalance`/`calculateWeeklyExpenseTotal`，所以 Phase 5
+  只需要加一個設定畫面呼叫 `repos.settings.update(...)` 並重新 `load()`
+  （或直接更新 store 裡的 `settings`），不需要動這裡的計算邏輯。
+- **`Wallets.tsx` 的「切換」按鈕目前只在未封存的錢包上顯示**，封存的錢包
+  無法直接切換過去（要先「取消封存」）。這是刻意的（SPEC.md §3.1：
+  「封存的錢包不顯示在主畫面」），但目前也連帶「不能切換過去」一起擋掉，
+  沒有測案要求相反行為，先記錄以防之後被誤認為 bug。
+- **分類管理 UI（Phase 6 範圍）完全沒做**——新增/編輯交易時分類清單是唯讀的
+  （只能選現有分類，不能在交易表單裡臨時新增分類），這是刻意留給 Phase 6。
+- 本機沙盒 Playwright executable 版本落差的 workaround
+  （`playwright.local.config.ts`，未提交）這次也用到了，作法與 Phase 1/3
+  交接筆記描述的完全相同，沒有新坑。
+
+**沒有需要人類決策的事項** —— E2E-1、E2E-2 測案與規格完全一致，沒有矛盾或缺漏。
+上面列的都是「規格沒細講、我做了合理預設值」的設計決策，已在此記錄，
+不阻塞本 phase 驗收，Phase 5 若要調整可以直接改，不需要回頭問人類。
 
 ---
 
-## Phase 5 — 預算與即時餘額 ⬜ TODO
+## Phase 5 — 預算與即時餘額 **NEXT**
 
 預算設定（none / weekly / total）、主畫面餘額卡片、超支警示、週起始日設定。
 

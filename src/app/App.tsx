@@ -1,15 +1,33 @@
-import { todayIso } from '../domain/iso-date'
+import { useEffect } from 'react'
+import { HashRouter, Route, Routes } from 'react-router-dom'
+import { useAppStore } from './store'
+import Home from '../ui/Home'
+import Wallets from '../ui/Wallets'
+import { NewWalletPage, EditWalletPage } from '../ui/WalletPages'
+import { NewTransactionPage, EditTransactionPage } from '../ui/TransactionPages'
 
 export default function App() {
+  const load = useAppStore((s) => s.load)
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
   return (
-    <main className="min-h-dvh bg-slate-50 text-slate-900 flex items-center justify-center p-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold">記帳本</h1>
-        <p className="mt-2 text-sm text-slate-500">Phase 0 — 地基就緒</p>
-        <p className="mt-1 text-xs text-slate-400" data-testid="today">
-          {todayIso(new Date())}
-        </p>
+    <HashRouter>
+      <div className="min-h-dvh bg-slate-50 text-slate-900">
+        <header className="border-b border-slate-200 bg-white px-4 py-3">
+          <h1 className="text-lg font-semibold">記帳本</h1>
+        </header>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/wallets" element={<Wallets />} />
+          <Route path="/wallets/new" element={<NewWalletPage />} />
+          <Route path="/wallets/:id/edit" element={<EditWalletPage />} />
+          <Route path="/transactions/new" element={<NewTransactionPage />} />
+          <Route path="/transactions/:id/edit" element={<EditTransactionPage />} />
+        </Routes>
       </div>
-    </main>
+    </HashRouter>
   )
 }
