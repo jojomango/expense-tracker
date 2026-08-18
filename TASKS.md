@@ -15,7 +15,7 @@
 | 1 | Domain：金額與時間 | ✅ DONE | [#1](https://github.com/jojomango/expense-tracker/pull/1) |
 | 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
 | 3 | 持久層與匯出匯入 | ✅ DONE | [#3](https://github.com/jojomango/expense-tracker/pull/3) |
-| 4 | 基礎 UI：錢包與交易 CRUD | ✅ DONE | （待補） |
+| 4 | 基礎 UI：錢包與交易 CRUD | ✅ DONE | [#5](https://github.com/jojomango/expense-tracker/pull/5) |
 | 5 | 預算與即時餘額 | **NEXT** | |
 | 6 | 分類與統計 | ⬜ TODO | |
 | 7 | PWA、備份與打磨 | ⬜ TODO | |
