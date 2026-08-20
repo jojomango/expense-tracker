@@ -5,6 +5,17 @@ import TransactionList from './TransactionList'
 import { calculateWeeklyBalance, calculateTotalBalance, calculateWeeklyExpenseTotal } from '../domain/budget'
 import { format } from '../domain/money'
 
+function OverBudgetNotice() {
+  return (
+    <p className="flex items-center gap-1 text-sm text-red-600">
+      <span data-testid="over-budget-icon" role="img" aria-label="警示">
+        ⚠️
+      </span>
+      已超支
+    </p>
+  )
+}
+
 function BalanceCard() {
   const wallet = useAppStore(selectCurrentWallet)
   const transactions = useAppStore((s) => s.transactions)
@@ -25,7 +36,7 @@ function BalanceCard() {
         >
           {format(result.balance)}
         </p>
-        {result.isOverBudget && <p className="text-sm text-red-600">已超支</p>}
+        {result.isOverBudget && <OverBudgetNotice />}
       </div>
     )
   }
@@ -43,6 +54,7 @@ function BalanceCard() {
           {format(result.balance)}
         </p>
         <p className="text-sm text-slate-500">已用 {result.usedPercent}%</p>
+        {result.isOverBudget && <OverBudgetNotice />}
       </div>
     )
   }
@@ -64,6 +76,7 @@ export default function Home() {
   const wallet = useAppStore(selectCurrentWallet)
   const transactions = useAppStore((s) => s.transactions)
   const categories = useAppStore((s) => s.categories)
+  const weekStartDay = useAppStore((s) => s.settings.weekStartDay)
   const createWallet = useAppStore((s) => s.createWallet)
 
   if (status === 'loading') {
@@ -112,7 +125,12 @@ export default function Home() {
         </Link>
       </div>
 
-      <TransactionList wallet={wallet} transactions={walletTransactions} categories={categories} />
+      <TransactionList
+        wallet={wallet}
+        transactions={walletTransactions}
+        categories={categories}
+        weekStartDay={weekStartDay}
+      />
     </div>
   )
 }

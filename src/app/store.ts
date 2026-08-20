@@ -56,6 +56,8 @@ interface AppState {
     },
   ) => Promise<void>
   deleteTransaction: (id: string) => Promise<void>
+
+  updateSettings: (patch: Partial<Settings>) => Promise<void>
 }
 
 function nowIso(): string {
@@ -172,6 +174,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   async deleteTransaction(id) {
     await repos.transactions.remove(id)
     set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }))
+  },
+
+  async updateSettings(patch) {
+    const { settings } = get()
+    const next: Settings = { ...settings, ...patch }
+    await repos.settings.update(next)
+    set({ settings: next })
   },
 }))
 

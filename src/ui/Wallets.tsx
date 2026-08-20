@@ -59,6 +59,7 @@ export default function Wallets() {
                 {w.id !== currentWallet?.id && !w.archived && (
                   <button
                     type="button"
+                    data-testid="switch-wallet"
                     className="text-sm text-slate-600 underline"
                     onClick={() => switchWallet(w.id)}
                   >
