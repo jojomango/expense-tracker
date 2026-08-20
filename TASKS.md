@@ -16,8 +16,8 @@
 | 2 | Domain：實體與預算計算 | ✅ DONE | [#2](https://github.com/jojomango/expense-tracker/pull/2) |
 | 3 | 持久層與匯出匯入 | ✅ DONE | [#3](https://github.com/jojomango/expense-tracker/pull/3) |
 | 4 | 基礎 UI：錢包與交易 CRUD | ✅ DONE | [#5](https://github.com/jojomango/expense-tracker/pull/5) |
-| 5 | 預算與即時餘額 | **NEXT** | |
-| 6 | 分類與統計 | ⬜ TODO | |
+| 5 | 預算與即時餘額 | ✅ DONE | [#6](https://github.com/jojomango/expense-tracker/pull/6) |
+| 6 | 分類與統計 | **NEXT** | |
 | 7 | PWA、備份與打磨 | ⬜ TODO | |
 
 ---
@@ -452,17 +452,110 @@ phase 就有的已知坑，同樣不阻塞本 phase 驗收，但建議不要再�
 
 ---
 
-## Phase 5 — 預算與即時餘額 **NEXT**
+## Phase 5 — 預算與即時餘額 ✅ DONE
 
 預算設定（none / weekly / total）、主畫面餘額卡片、超支警示、週起始日設定。
 
 對應測案：**E2E-3、E2E-4、E2E-5**
 
-**這個 phase 結束後，app 才第一次具備完整價值。**
+### 驗收條件
+
+- [x] E2E-3、E2E-4、E2E-5 全數通過（Chromium + Mobile Chrome，共 12 個 E2E 測試全綠）
+- [x] `npm run verify` 通過，domain 覆蓋率 96.11%（門檻 90%，本 phase 未新增 domain 程式碼）
+- [x] `npm run e2e` 通過（本機沙盒沿用 Phase 1 交接筆記的 `playwright.local.config.ts`
+      workaround 驗證，驗完已刪除、未提交）
+- [x] `src/domain/` 仍然零外部依賴（`check:domain` 通過，12 個 domain 檔案）
+
+### 交接筆記
+
+**產出：**
+- `src/ui/Settings.tsx` — 新的設定畫面，路由 `/settings`，目前只有「週起始日」下拉選單
+  （7 個選項，`0`=週日 ~ `6`=週六）。`theme` 與 `defaultWalletId` 這兩個
+  SPEC.md §3.5 的設定**刻意還沒放進這個畫面**：`defaultWalletId` 已經由
+  `/wallets` 的「切換」按鈕操作（Phase 4 就有了），`theme` 屬於 Phase 7
+  「深色模式」的範圍。Phase 7 要加深色模式時，直接在這個檔案加第二個欄位即可。
+- `src/app/store.ts` 新增 `updateSettings(patch: Partial<Settings>)`——
+  唯一的設定更新入口，寫進 repository 後同步更新記憶體狀態。
+  刻意設計成吃 `Partial<Settings>` 而不是完整的 `Settings`，
+  Phase 7 加 `theme` 時不需要改這個函式的簽章。
+- `src/app/App.tsx` 的 header 加上「設定」連結，並把 `<h1>記帳本</h1>` 包進
+  `<Link to="/">` 讓它同時是回首頁的入口。
+- `src/ui/Home.tsx` 的 `BalanceCard` 抽出 `OverBudgetNotice` 子元件
+  （⚠️ 圖示 + 「已超支」文字），**weekly 與 total 兩種模式共用**——
+  Phase 4 只有 weekly 模式有超支提示，total 模式漏了，這個 phase 補上
+  （SPEC.md §3.4「餘額可為負，UI 以紅色與警示圖示呈現」是兩種模式共通的規則）。
+- `src/ui/TransactionList.tsx` 改為**依週分組顯示**（呼叫 domain 的 `groupByWeek`），
+  每組有一個 `data-testid="week-group-header"` 的標題（`週首 ~ 週尾`）。
+  E2E-5 要求「交易列表的週分組標題同步更新」，這是實作它的地方。
+- `tests/e2e/budget-balance.spec.ts` — E2E-3、E2E-4、E2E-5 三個測試，
+  測試名稱以測案編號開頭。
+
+**設計決策：**
+
+- **預算設定沒有獨立的「預算」畫面**——SPEC.md §6 Phase 5 說「錢包預算設定
+  （none / weekly / total）」，但 Phase 4 的 `WalletForm` 早就已經有
+  `budgetMode` 與 `budgetAmount` 兩個欄位、建立與編輯錢包都能設定。
+  再做一個獨立的預算畫面只會是同一份表單的第二個入口，所以這個 phase
+  **沒有新增任何預算設定 UI**，只驗證既有表單在 E2E-4 的情境下正確運作。
+  如果之後人類希望「預算」是錢包編輯以外的獨立入口，那是 UX 偏好問題，不是規格缺漏。
+- **`TransactionList` 的 `weekStartDay` 是 prop，不是元件自己讀 store**——
+  維持 Phase 4「UI 元件只渲染與轉發事件」的分層，`Home` 負責從 store 讀值並往下傳。
+- **週分組的排序**：組間依週首倒序（`groupByWeek` 本身的行為，最新的週在最上面），
+  但**組內我在 UI 層再排一次序，改成日期新到舊**（`sortNewestFirst`）。
+  原因：`groupByWeek` 回傳的組內是日期**正序**（Phase 1 交接筆記寫明的設計），
+  但 E2E-2 要求「交易出現在列表最上方」，也就是最新的在最上面。
+  這正是 Phase 1 交接筆記預告的「呼叫端自行二次排序」情境，**沒有動 `week.ts`**。
+- **`data-testid="transaction-list"` 從 `<ul>` 移到外層 `<div>`**——
+  因為現在一個列表裡有多個 `<ul>`（每週一組）。既有的 E2E-2 斷言
+  `getByTestId('transaction-list').getByTestId('transaction-item').first()`
+  仍然通過（後代選擇器不在意中間隔了幾層）。
+- **E2E-5 用 `page.clock.install()` 把瀏覽器時間釘在 2026-08-11**——
+  測案明確寫「今天是 2026-08-11（週二）」，而 `BalanceCard` 用 `new Date()`
+  取現在時間（UI 層取現在時間是允許的，domain 層才禁止）。
+  這是 Playwright 內建的 clock API，**沒有引入任何新套件**。
+- **E2E-4 / E2E-5 的頁面切換一律用「點連結」而不是 `page.goto()`**——
+  一開始寫成 `page.goto('/')` 時 E2E-4 掛掉：`goto` 是整頁重新載入，
+  而 `switchWallet` 的 IndexedDB 寫入可能還沒完成（Phase 4 交接筆記提過這個時序風險），
+  重新載入後讀到的是舊的 `defaultWalletId`。改成點連結走 SPA 導覽後就穩定了，
+  而且更貼近測案「立即變為」（不重新整理）的語意。**這是一個真實存在的
+  時序風險，不只是測試技巧問題**——見下方「已知的坑」。
+
+**已知但不影響本 phase 驗收的坑（留給 Phase 6／7 注意）：**
+
+- **切換錢包／改設定後立刻整頁重新載入，有極小機率讀到舊值。**
+  Phase 4 交接筆記已經記錄過，這個 phase 在寫 E2E-4 時**實際踩到了**
+  （用 `page.goto()` 時測試不穩）。目前 `switchWallet` / `updateSettings`
+  都是 `await repository.update()` 之後才更新記憶體狀態，所以正常 SPA 操作
+  絕對正確；只有「寫入還在飛、使用者馬上按 F5」這個視窗有風險。
+  沒有測案要求處理，也沒有簡單的修法（IndexedDB 寫入無法同步完成），
+  先記錄。Phase 7 做錯誤處理時可以考慮加一個「儲存中」的視覺指示。
+- **週分組標題目前只顯示 `YYYY-MM-DD ~ YYYY-MM-DD`**，沒有「本週」「上週」
+  之類的人性化標籤。SPEC.md 沒有規定格式，E2E-5 只驗證標題會隨 weekStartDay
+  更新。Phase 7 打磨時可以改得更好看，改的時候記得 E2E-5 斷言的是
+  標題**包含**兩個日期字串（`toContainText`），加前綴文字不會弄壞測試。
+- **自訂幣別小數位數（D6）仍未解決**——Phase 1、2、3 交接筆記都提過，
+  這個 phase 一樣沒碰。`WalletForm` 的幣別下拉只列出 `KNOWN_CURRENCIES`
+  這 20 種，所以**使用者目前根本無法建立自訂幣別的錢包**，因此不會爆炸。
+  換句話說：這顆坑現在是被 UI 擋住的，不是被解決的。
+  哪個 phase 要真的支援 D6 的「使用者自訂代碼」，就必須先決定小數位數怎麼來。
+- **`WalletForm` 把 `budgetAmount` 最小單位轉回顯示字串時，小數位數是用
+  `currency === 'JPY' ? 0 : 2` 硬寫的**（`TransactionForm` 也有一份一樣的）。
+  這在 20 種內建幣別裡對 JPY/KRW/VND 以外的都碰巧正確，但 **KRW 與 VND
+  是 0 位小數，會被當成 2 位顯示成錯誤的數字**（例如 KRW 50000 會顯示成 500）。
+  這是 Phase 4 留下的、這個 phase 才看清楚的既有 bug，E2E 測案只用 TWD/JPY
+  所以測不出來。**正確做法是改用 `currency.ts` 的 `decimalsFor(currency)`。**
+  我刻意沒有在這個 phase 順手修，因為它不屬於 Phase 5 的範圍
+  （CLAUDE.md：不多做，不少做），但**建議 Phase 6 或 7 開場時第一件事就修掉**，
+  兩個檔案各一行，順便補一個 KRW 錢包的測試。
+- 本機沙盒 Playwright executable 版本落差的 workaround 這次也用到了，
+  作法與 Phase 1/3/4 交接筆記描述的完全相同，沒有新坑。
+
+**沒有需要人類決策的事項** —— E2E-3、E2E-4、E2E-5 測案與規格完全一致，沒有矛盾或缺漏。
+上面「KRW/VND 小數位數」那項是既有實作 bug，不是規格問題，已寫明修法留給下一個 phase。
 
 ---
 
-## Phase 6 — 分類與統計 ⬜ TODO
+## Phase 6 — 分類與統計 **NEXT**
 
 分類管理 CRUD、分類支出佔比、近 8 週趨勢圖。
 
