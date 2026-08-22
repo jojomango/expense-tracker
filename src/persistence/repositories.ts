@@ -8,7 +8,7 @@
  */
 import { assertCanDeleteWallet, type Wallet } from '../domain/wallet'
 import type { Transaction } from '../domain/transaction'
-import { reassignDeletedCategory, type Category } from '../domain/category'
+import { assertCanDeleteCategory, reassignDeletedCategory, type Category } from '../domain/category'
 import { DEFAULT_SETTINGS, type Settings } from '../domain/settings'
 import type {
   WalletRepository,
@@ -85,6 +85,10 @@ class DexieCategoryRepository implements CategoryRepository {
 
   async remove(id: string): Promise<void> {
     await this.db.transaction('rw', this.db.categories, this.db.transactions, async () => {
+      const category = await this.db.categories.get(id)
+      if (category) {
+        assertCanDeleteCategory(category)
+      }
       const affected = await this.db.transactions.where('categoryId').equals(id).toArray()
       const reassigned = reassignDeletedCategory(affected, id)
       if (reassigned.length > 0) {

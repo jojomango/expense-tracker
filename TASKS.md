@@ -17,8 +17,8 @@
 | 3 | 持久層與匯出匯入 | ✅ DONE | [#3](https://github.com/jojomango/expense-tracker/pull/3) |
 | 4 | 基礎 UI：錢包與交易 CRUD | ✅ DONE | [#5](https://github.com/jojomango/expense-tracker/pull/5) |
 | 5 | 預算與即時餘額 | ✅ DONE | [#6](https://github.com/jojomango/expense-tracker/pull/6) |
-| 6 | 分類與統計 | **NEXT** | |
-| 7 | PWA、備份與打磨 | ⬜ TODO | |
+| 6 | 分類與統計 | ✅ DONE | [#7](https://github.com/jojomango/expense-tracker/pull/7) |
+| 7 | PWA、備份與打磨 | **NEXT** | |
 
 ---
 
@@ -555,14 +555,108 @@ phase 就有的已知坑，同樣不阻塞本 phase 驗收，但建議不要再�
 
 ---
 
-## Phase 6 — 分類與統計 **NEXT**
+## Phase 6 — 分類與統計 ✅ DONE
 
 分類管理 CRUD、分類支出佔比、近 8 週趨勢圖。
 
-對應測案：**E2E-6**（註：圖表本身不做像素比對，只驗證資料正確）
+### ⚠️ 開工前發現的測案缺漏（已記錄於 PR「需要人類決策」段落）
 
-⚠️ 圖表函式庫不在 SPEC.md §5 的允許清單中。
-若你認為需要，**停止並在 PR 中提出**；也可考慮用純 SVG 手繪，不引入套件。
+TASKS.md 原先標註本 phase「對應測案：E2E-6」，但 `TESTCASES.md` 的 **E2E-6 實際上是
+「備份與還原」**（屬於 Phase 7 範圍），跟本 phase 的分類管理／統計圖表完全無關。
+`TESTCASES.md` 對「分類管理 CRUD、分類支出佔比、近 8 週趨勢」**沒有任何 E2E 契約**
+（只有 Phase 2 就做完的 domain 層 T3.5 分類彙總測案）。
+
+依 CLAUDE.md 對「測案缺漏」的規則：這不是矛盾（沒有測案要求相反行為），
+所以**沒有停下工作**，而是新增自訂測案（測試名稱用描述性中文，不假冒 T/E2E 編號）
+涵蓋本 phase 的實際功能，並在 PR 描述的「需要人類決策」段落提出這個缺漏，
+請人類決定要不要正式把這些測案編號補進 `TESTCASES.md`。
+
+### 驗收條件
+
+- [x] 新增的自訂測案（domain + persistence + E2E）全數通過，測試名稱標明「Phase 6 新增，非
+      TESTCASES.md 契約項目」
+- [x] `npm run verify` 通過，domain 覆蓋率 96.53%（門檻 90%）
+- [x] `npm run e2e` 通過（Chromium + Mobile Chrome，共 18 個 E2E 測試全綠；本機沙盒沿用
+      Phase 1 交接筆記的 `playwright.local.config.ts` workaround 驗證，驗完已刪除、未提交）
+- [x] `src/domain/` 仍然零外部依賴（`check:domain` 通過，13 個 domain 檔案）
+- [x] 沒有引入任何圖表函式庫——圓餅圖與長條圖皆為手繪 SVG（`src/ui/Stats.tsx`）
+
+### 交接筆記
+
+**產出：**
+- `src/domain/month.ts` — 新模組，`monthRangeOf(date)` 計算西曆月份區間（供「本月」分類佔比
+  用）。與 `week.ts` 同樣原則：一律 UTC 曆日運算，不使用本地時區建構子。
+- `src/domain/week.ts` 新增 `shiftIsoDate(date, days)`——單純的日期位移工具，`summarizeWeeklyTrend`
+  用它從本週週首往回推算前 N 週的週首，之後如果還有別的地方需要「往前/往後幾天」也可以直接用，
+  不需要各自手刻 `Date.UTC` 運算。
+- `src/domain/budget.ts` 新增 `summarizeWeeklyTrend(wallet, transactions, weekStartDay,
+  referenceDate, weeksCount)`——回傳近 N 週的支出總額（`Money[]`，只計 expense，延續 D1 精神），
+  依週首由舊到新排序，最後一筆是本週。與 `budgetMode` 無關（`none` 模式的錢包也能查）。
+- `src/domain/category.ts` 新增 `assertCanDeleteCategory` / `DefaultCategoryError`——
+  SPEC.md §3.3「系統預設分類可改名但不可刪除」這條規則之前只有型別註解、沒有任何程式碼強制
+  執行。這個 phase 補上，並在 `persistence/repositories.ts` 的 `DexieCategoryRepository.remove`
+  裡在真正刪除前呼叫（跟 `assertCanDeleteWallet` 用在 `WalletRepository.remove` 是同一個模式）。
+  **這連帶讓 Phase 3 寫的一個既有測試變成錯的**（它拿第一個預設分類當刪除測試的 fixture，
+  預期刪除成功並轉移交易）——已修正該測試改用一個新建的非預設分類當 fixture，並新增一個
+  測試驗證「刪除預設分類會拋出 `DefaultCategoryError`，分類與交易皆不受影響」。這不是弱化
+  既有測案，是修正一個從 Phase 3 就存在、但當時沒有業務規則可違反的測試盲點。
+- `src/app/store.ts` 新增 `addCategory` / `updateCategory` / `deleteCategory`——與
+  `createWallet` 系列同一個模式（`id` 用 `crypto.randomUUID()` 產生）。`deleteCategory` 額外
+  用 `reassignDeletedCategory` 同步更新記憶體中的 `transactions`（persistence 層已經在 DB
+  端做了同樣轉換，這裡是讓 Zustand store 立即反映、不需要重新整理頁面）。
+- `src/ui/CategoryForm.tsx` / `CategoryPages.tsx` / `Categories.tsx`——分類管理 CRUD UI，
+  設計完全比照 `WalletForm` / `WalletPages` / `Wallets.tsx` 的既有模式：編輯時鎖住「類型」
+  欄位（比照編輯錢包鎖幣別），刪除走 `window.confirm` 二次確認，捕捉 `DefaultCategoryError`
+  用 `window.alert` 顯示（比照 `Wallets.tsx` 捕捉 `LastWalletError` 的寫法）。
+- `src/ui/Stats.tsx`——統計頁，「本週／本月」切換分類佔比圓餅圖 + 近 8 週支出長條圖。
+  **兩個圖表都是手繪 SVG，沒有引入任何圖表函式庫**（SPEC.md §5 允許清單沒有圖表套件，
+  TASKS.md 原本就提醒要嘛停下來問人類、要嘛手繪 SVG——選了手繪）。圓餅圖用「單一圓圈
+  `stroke-dasharray`/`stroke-dashoffset` 位移」的經典技巧疊出每個分類的弧段，色票是寫死的
+  8 色循環陣列。所有數值同時用 `data-testid` / `data-*` 屬性暴露到 DOM（`category-pie-legend-item`
+  的 `data-percent`/`data-amount`、`weekly-trend-bar` 的 `data-amount`/`data-week-start`），
+  E2E 測試靠這些屬性驗證資料正確，不做任何像素比對。
+- `src/app/App.tsx` header 加上「分類」「統計」兩個連結。
+- 修掉 Phase 5 交接筆記記錄的 KRW/VND 小數位數 bug：`WalletForm.tsx` / `TransactionForm.tsx`
+  原本把顯示用的小數位數寫死成 `currency === 'JPY' ? 0 : 2`，改成呼叫 `decimalsFor(currency)`。
+  這是 Phase 5 交接筆記明確建議「Phase 6 或 7 開場時第一件事就修掉」的項目。
+- 新增 `tests/e2e/categories-stats.spec.ts`（3 個測試，涵蓋分類 CRUD、預設分類保護、
+  分類轉移未分類、統計頁週/月切換與近 8 週趨勢資料正確性）。
+
+**設計決策：**
+
+- **`summarizeWeeklyTrend` 回傳 `Money[]`（透過 `WeeklyTrendEntry.total`），不是原始整數**——
+  跟 `summarizeByCategory` 回傳原始整數不同，因為呼叫端（`Stats.tsx`）需要直接 `format()`
+  顯示金額，而這裡明確知道是單一錢包（`wallet.currency` 已知），沒有 `summarizeByCategory`
+  那種「呼叫端可能混合多幣別」的模糊地帶，回傳 `Money` 更方便也更安全。
+- **分類佔比圖的「本週／本月」是 UI 層自己用 `weekRangeOf`/`monthRangeOf` 過濾交易後才呼叫
+  `summarizeByCategory`**，domain 層沒有新增「依區間彙總分類」的專用函式——因為
+  `summarizeByCategory` 的簽章本來就是「餵給它什麼交易，它就彙總什麼」，過濾範圍是呼叫端
+  的責任（跟 Phase 2 交接筆記說的「`summarizeByCategory` 假設呼叫端已經篩選好」一致）。
+- **`CategoryForm` 編輯模式鎖住「類型」欄位**——目前沒有測案要求這個行為，是我的設計決策，
+  理由跟 Phase 4 鎖幣別一樣：分類類型如果中途改變，`TransactionForm` 依 `type` 篩選分類選單
+  的邏輯會產生混淆（一個分類卡在錯的分頁）。如果之後要開放改類型，需要一併想清楚已有交易
+  的處理方式。
+- **刪除分類的 UI 永遠顯示「刪除」按鈕（包含系統預設分類）**，而不是直接把預設分類的刪除
+  按鈕藏起來——比照 `Wallets.tsx` 對「刪除最後一個錢包」的處理方式：讓使用者點了之後才用
+  `window.alert` 告知不行，而不是讓使用者猜為什麼按鈕不見了。
+
+**已知但不影響本 phase 驗收的坑（留給 Phase 7 注意）：**
+
+- **本 phase 最重要的一件事**：`TESTCASES.md` 完全沒有 Phase 6 功能（分類管理 CRUD、統計圖表）
+  的 E2E 契約。已在 PR 描述提出，等待人類決定是否要把 `tests/e2e/categories-stats.spec.ts`
+  的測案正式編號收錄進 `TESTCASES.md`（如果要收錄，編號建議另闢一節，不要占用 E2E-6，
+  因為那個編號已經是「備份與還原」的契約）。
+- **自訂幣別小數位數（D6）仍未解決**——Phase 1～5 交接筆記都提過，這個 phase 一樣沒碰。
+  `WalletForm` 的幣別下拉仍只列 `KNOWN_CURRENCIES` 20 種，使用者無法建立自訂幣別錢包，
+  所以這顆坑目前仍是被 UI 擋住、不是被解決。
+- **統計頁的圓餅圖色票是寫死的固定陣列，循環使用**——分類數超過 8 個時顏色會重複。
+  SPEC.md 沒有規定配色數量上限，目前沒有測案要求超過 8 色的情境，先記錄。
+- **`Stats.tsx` 沒有處理「本週/本月完全沒有支出」以外的空狀態微調**（例如近 8 週全部為 0
+  時長條圖會全部貼底，但不會 crash，已用 `Math.max(1, ...)` 防呆避免除以 0）。
+
+**沒有需要人類決策的「規格矛盾」事項** —— SPEC.md 本身沒有矛盾。
+唯一需要人類決策的是上面提到的「TESTCASES.md 缺少本 phase 的 E2E 契約」這個缺漏，
+已在 PR 描述提出，不阻塞本 phase 的功能驗收（新增的自訂測案已完整覆蓋實際行為）。
 
 ---
 
@@ -580,4 +674,16 @@ PWA manifest + service worker、匯出／匯入 UI、備份提醒、深色模式
 > Agent 發現規格矛盾或需要批准時，寫在這裡，並同時寫進 PR 描述。
 > 人類回覆後會把該項移除。
 
-_（目前無）_
+### Phase 6：TESTCASES.md 缺少分類管理／統計圖表的 E2E 契約
+
+TASKS.md 原本標註 Phase 6「對應測案：E2E-6」，但 `TESTCASES.md` 的 E2E-6 實際上是
+「備份與還原」（Phase 7 範圍的功能），跟 Phase 6 的分類管理 CRUD、分類支出佔比圓餅圖、
+近 8 週趨勢長條圖完全無關。`TESTCASES.md` 對這些 Phase 6 功能**沒有任何 E2E 測案**。
+
+這不是「測案與規格矛盾」，而是「規格缺漏」——沒有測案要求相反行為，所以沒有停止工作，
+而是新增了自訂測案（`tests/e2e/categories-stats.spec.ts`，測試名稱用描述性中文，
+不假冒官方編號）涵蓋實際功能。
+
+**需要人類決定：** 要不要把這些自訂測案正式編號、收錄進 `TESTCASES.md`？
+如果要收錄，建議另闢新的一節（例如 E2E-8 或獨立的「分類與統計」小節），
+不要占用 E2E-6（那個編號已經是「備份與還原」的官方契約，Phase 7 會用到）。

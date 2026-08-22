@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { KNOWN_CURRENCIES, type CurrencyCode } from '../domain/currency'
+import { KNOWN_CURRENCIES, decimalsFor, type CurrencyCode } from '../domain/currency'
 import type { BudgetMode, Wallet } from '../domain/wallet'
 import { parse } from '../domain/money'
 
@@ -37,7 +37,7 @@ export default function WalletForm({
   const [budgetMode, setBudgetMode] = useState<BudgetMode>(initial?.budgetMode ?? 'weekly')
   const [budgetAmountInput, setBudgetAmountInput] = useState(
     initial?.budgetAmount !== null && initial?.budgetAmount !== undefined
-      ? String(initial.budgetAmount / 10 ** (currency === 'JPY' ? 0 : 2))
+      ? String(initial.budgetAmount / 10 ** decimalsFor(currency))
       : '',
   )
   const [error, setError] = useState<string | null>(null)

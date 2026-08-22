@@ -41,6 +41,11 @@ function utcMillisToIso(millis: number): IsoDate {
   return toIsoDate(`${y}-${m}-${d}`)
 }
 
+/** 將 IsoDate 位移 `days` 天（可為負數），跨月／跨年／跨閏年皆以 UTC 曆日運算。 */
+export function shiftIsoDate(date: IsoDate, days: number): IsoDate {
+  return utcMillisToIso(isoToUtcMillis(date) + days * MS_PER_DAY)
+}
+
 export function weekRangeOf(date: IsoDate, weekStartDay: WeekStartDay): WeekRange {
   const millis = isoToUtcMillis(date)
   const dayOfWeek = new Date(millis).getUTCDay()

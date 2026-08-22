@@ -4,6 +4,7 @@ import {
   calculateWeeklyExpenseTotal,
   calculateTotalBalance,
   summarizeByCategory,
+  summarizeWeeklyTrend,
 } from '../../src/domain/budget'
 import type { Wallet } from '../../src/domain/wallet'
 import type { Transaction } from '../../src/domain/transaction'
@@ -278,5 +279,63 @@ describe('T3.5 — 分類彙總', () => {
 
   it('T3.5.4 — 空清單，回傳空陣列，佔比計算不 crash', () => {
     expect(summarizeByCategory([])).toEqual([])
+  })
+})
+
+describe('summarizeWeeklyTrend — 近 N 週支出趨勢（Phase 6 新增，非 TESTCASES.md 契約項目）', () => {
+  const dailyWallet: Wallet = {
+    id: 'w-daily',
+    name: '日常',
+    currency: 'TWD',
+    budgetMode: 'weekly',
+    budgetAmount: 300000,
+    archived: false,
+  }
+
+  it('回傳 weeksCount 筆，依週首由舊到新排序，最後一筆即為本週', () => {
+    const result = summarizeWeeklyTrend(dailyWallet, [], WEEK_START, REFERENCE_DATE, 8)
+    expect(result).toHaveLength(8)
+    expect(result.at(-1)).toEqual({
+      start: d('2026-08-10'),
+      end: d('2026-08-16'),
+      total: { amount: 0, currency: 'TWD' },
+    })
+    for (let i = 1; i < result.length; i++) {
+      expect(result[i]!.start > result[i - 1]!.start).toBe(true)
+    }
+  })
+
+  it('每一週只加總落在該週區間內的支出', () => {
+    const transactions = [
+      tx({ walletId: 'w-daily', type: 'expense', amount: 10000, date: d('2026-08-11') }), // 本週
+      tx({ walletId: 'w-daily', type: 'expense', amount: 20000, date: d('2026-08-03') }), // 上週
+    ]
+    const result = summarizeWeeklyTrend(dailyWallet, transactions, WEEK_START, REFERENCE_DATE, 8)
+    expect(result.at(-1)?.total.amount).toBe(10000)
+    expect(result.at(-2)?.total.amount).toBe(20000)
+    expect(result.at(-3)?.total.amount).toBe(0)
+  })
+
+  it('只計 expense，不計 income（延續 D1 精神）', () => {
+    const transactions = [tx({ walletId: 'w-daily', type: 'income', amount: 50000, date: d('2026-08-11') })]
+    const result = summarizeWeeklyTrend(dailyWallet, transactions, WEEK_START, REFERENCE_DATE, 8)
+    expect(result.at(-1)?.total.amount).toBe(0)
+  })
+
+  it('錢包隔離：其他錢包的交易不計入', () => {
+    const transactions = [tx({ walletId: 'w-other', type: 'expense', amount: 10000, date: d('2026-08-11') })]
+    const result = summarizeWeeklyTrend(dailyWallet, transactions, WEEK_START, REFERENCE_DATE, 8)
+    expect(result.at(-1)?.total.amount).toBe(0)
+  })
+
+  it('budgetMode 為 none 時仍可計算（不受預算模式限制）', () => {
+    const noBudgetWallet: Wallet = { ...dailyWallet, budgetMode: 'none', budgetAmount: null }
+    const transactions = [tx({ walletId: 'w-daily', type: 'expense', amount: 10000, date: d('2026-08-11') })]
+    const result = summarizeWeeklyTrend(noBudgetWallet, transactions, WEEK_START, REFERENCE_DATE, 8)
+    expect(result.at(-1)?.total.amount).toBe(10000)
+  })
+
+  it('weeksCount 為 0 時回傳空陣列', () => {
+    expect(summarizeWeeklyTrend(dailyWallet, [], WEEK_START, REFERENCE_DATE, 0)).toEqual([])
   })
 })
