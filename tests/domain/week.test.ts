@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weekRangeOf, groupByWeek, type WeekStartDay } from '../../src/domain/week'
+import { weekRangeOf, groupByWeek, shiftIsoDate, type WeekStartDay } from '../../src/domain/week'
 import { toIsoDate, type IsoDate } from '../../src/domain/iso-date'
 
 const d = (s: string): IsoDate => toIsoDate(s)
@@ -163,5 +163,23 @@ describe('T2.5 — 週分組', () => {
     const groupsWeekStart0 = groupByWeek(items, getDate, 0)
     expect(groupsWeekStart1).toHaveLength(2)
     expect(groupsWeekStart0).toHaveLength(1)
+  })
+})
+
+describe('shiftIsoDate — 日期位移（Phase 6 新增，供近 8 週趨勢圖計算週首用，非 TESTCASES.md 契約項目）', () => {
+  it('往前位移 7 天，跨月正確', () => {
+    expect(shiftIsoDate(d('2026-08-03'), -7)).toBe(d('2026-07-27'))
+  })
+
+  it('往後位移 7 天，跨年正確', () => {
+    expect(shiftIsoDate(d('2025-12-29'), 7)).toBe(d('2026-01-05'))
+  })
+
+  it('位移 0 天，回傳原日期', () => {
+    expect(shiftIsoDate(d('2026-08-11'), 0)).toBe(d('2026-08-11'))
+  })
+
+  it('位移跨閏年 2 月，正確處理', () => {
+    expect(shiftIsoDate(d('2028-03-01'), -1)).toBe(d('2028-02-29'))
   })
 })

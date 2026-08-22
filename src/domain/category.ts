@@ -72,3 +72,18 @@ export function reassignDeletedCategory<T extends { categoryId: string | null }>
     t.categoryId === deletedCategoryId ? { ...t, categoryId: null } : t,
   )
 }
+
+/** 刪除系統預設分類時拋出（SPEC.md §3.3：預設分類可改名但不可刪除）。 */
+export class DefaultCategoryError extends Error {
+  constructor() {
+    super('系統預設分類不可刪除')
+    this.name = 'DefaultCategoryError'
+  }
+}
+
+/** 刪除分類前的業務規則檢查，讓 persistence 層在真正執行刪除前呼叫。 */
+export function assertCanDeleteCategory(category: Category): void {
+  if (category.isDefault) {
+    throw new DefaultCategoryError()
+  }
+}

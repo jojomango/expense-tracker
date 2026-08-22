@@ -6,8 +6,8 @@
  * 由「只處理傳入 wallet.id 對應的交易」自然達成，不需要呼叫端事先過濾。
  */
 import { Money, subtract, sum, percentOf, type Money as MoneyType } from './money'
-import { weekRangeOf, type WeekStartDay } from './week'
-import { todayIso, compareIsoDate } from './iso-date'
+import { weekRangeOf, shiftIsoDate, type WeekStartDay } from './week'
+import { todayIso, compareIsoDate, type IsoDate } from './iso-date'
 import type { Wallet } from './wallet'
 import type { Transaction, TransactionType } from './transaction'
 
@@ -89,6 +89,46 @@ export function calculateTotalBalance(
   const budget = Money.of(wallet.budgetAmount, wallet.currency)
   const balance = subtract(budget, spent)
   return { balance, isOverBudget: balance.amount < 0, usedPercent: percentOf(spent, budget) }
+}
+
+export interface WeeklyTrendEntry {
+  readonly start: IsoDate
+  readonly end: IsoDate
+  /** 該週支出總額（只計 expense，沿用 D1 精神）。 */
+  readonly total: MoneyType
+}
+
+/**
+ * 近 `weeksCount` 週的支出趨勢（Phase 6：近 8 週趨勢圖），依週首由舊到新排序，
+ * 最後一筆為本週。與 budgetMode 無關（none 模式的錢包也能查）。
+ */
+export function summarizeWeeklyTrend(
+  wallet: Wallet,
+  transactions: readonly Transaction[],
+  weekStartDay: WeekStartDay,
+  referenceDate: Date,
+  weeksCount: number,
+): WeeklyTrendEntry[] {
+  if (weeksCount <= 0) return []
+
+  const currentWeekStart = weekRangeOf(todayIso(referenceDate), weekStartDay).start
+  const expenses = walletExpenses(wallet, transactions)
+  const entries: WeeklyTrendEntry[] = []
+
+  for (let i = weeksCount - 1; i >= 0; i--) {
+    const anchor = shiftIsoDate(currentWeekStart, -7 * i)
+    const { start, end } = weekRangeOf(anchor, weekStartDay)
+    const inWeek = expenses.filter(
+      (t) => compareIsoDate(t.date, start) >= 0 && compareIsoDate(t.date, end) <= 0,
+    )
+    const total = sum(
+      inWeek.map((t) => Money.of(t.amount, wallet.currency)),
+      wallet.currency,
+    )
+    entries.push({ start, end, total })
+  }
+
+  return entries
 }
 
 /**

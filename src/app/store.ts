@@ -8,7 +8,8 @@ import type { Wallet, BudgetMode } from '../domain/wallet'
 import { validateWallet, assertCanDeleteWallet, LastWalletError } from '../domain/wallet'
 import type { Transaction, TransactionType } from '../domain/transaction'
 import { validateTransaction } from '../domain/transaction'
-import type { Category } from '../domain/category'
+import type { Category, CategoryType } from '../domain/category'
+import { validateCategory, reassignDeletedCategory } from '../domain/category'
 import type { Settings } from '../domain/settings'
 import { DEFAULT_SETTINGS } from '../domain/settings'
 import type { CurrencyCode } from '../domain/currency'
@@ -58,6 +59,10 @@ interface AppState {
   deleteTransaction: (id: string) => Promise<void>
 
   updateSettings: (patch: Partial<Settings>) => Promise<void>
+
+  addCategory: (input: { name: string; type: CategoryType; icon: string }) => Promise<void>
+  updateCategory: (category: Category) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
 }
 
 function nowIso(): string {
@@ -181,6 +186,35 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next: Settings = { ...settings, ...patch }
     await repos.settings.update(next)
     set({ settings: next })
+  },
+
+  async addCategory(input) {
+    const category: Category = {
+      id: crypto.randomUUID(),
+      name: input.name,
+      type: input.type,
+      icon: input.icon,
+      isDefault: false,
+    }
+    validateCategory(category)
+    await repos.categories.add(category)
+    set((state) => ({ categories: [...state.categories, category] }))
+  },
+
+  async updateCategory(category) {
+    validateCategory(category)
+    await repos.categories.update(category)
+    set((state) => ({
+      categories: state.categories.map((c) => (c.id === category.id ? category : c)),
+    }))
+  },
+
+  async deleteCategory(id) {
+    await repos.categories.remove(id)
+    set((state) => ({
+      categories: state.categories.filter((c) => c.id !== id),
+      transactions: reassignDeletedCategory(state.transactions, id),
+    }))
   },
 }))
 

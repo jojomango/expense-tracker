@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../app/store'
 import type { Transaction, TransactionType } from '../domain/transaction'
 import { parse } from '../domain/money'
+import { decimalsFor } from '../domain/currency'
 import { todayIso, toIsoDate, type IsoDate } from '../domain/iso-date'
 import type { Wallet } from '../domain/wallet'
 
@@ -24,7 +25,7 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
   )
 
   const [amountInput, setAmountInput] = useState(
-    initial ? String(initial.amount / 10 ** (wallet.currency === 'JPY' ? 0 : 2)) : '',
+    initial ? String(initial.amount / 10 ** decimalsFor(wallet.currency)) : '',
   )
   const [categoryId, setCategoryId] = useState<string>(
     initial?.categoryId ?? optionsForType[0]?.id ?? '',

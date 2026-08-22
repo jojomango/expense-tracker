@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   validateCategory,
   reassignDeletedCategory,
+  assertCanDeleteCategory,
+  DefaultCategoryError,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   type Category,
@@ -64,5 +66,17 @@ describe('reassignDeletedCategory — 分類刪除後交易轉移到未分類（
   it('沒有交易引用該分類時，全部交易維持不變', () => {
     const transactions = [{ id: 't1', categoryId: 'c2' }]
     expect(reassignDeletedCategory(transactions, 'c1')).toEqual(transactions)
+  })
+})
+
+describe('assertCanDeleteCategory — 系統預設分類不可刪除（SPEC.md §3.3，Phase 6 新增，非 TESTCASES.md 契約項目）', () => {
+  it('isDefault 為 true 時拋出 DefaultCategoryError', () => {
+    expect(() => assertCanDeleteCategory({ ...baseCategory, isDefault: true })).toThrow(
+      DefaultCategoryError,
+    )
+  })
+
+  it('isDefault 為 false 時不拋錯', () => {
+    expect(() => assertCanDeleteCategory({ ...baseCategory, isDefault: false })).not.toThrow()
   })
 })
