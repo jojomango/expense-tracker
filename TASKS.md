@@ -571,6 +571,12 @@ TASKS.md 原先標註本 phase「對應測案：E2E-6」，但 `TESTCASES.md` �
 涵蓋本 phase 的實際功能，並在 PR 描述的「需要人類決策」段落提出這個缺漏，
 請人類決定要不要正式把這些測案編號補進 `TESTCASES.md`。
 
+**✅ 更新（PR #7 合併後）：** 人類已回覆「要收錄」。`TESTCASES.md` 已補上
+`T2.6`、`T3.6`、`T4.1.7`、新的 `T5 — Month`／`T6 — Category` 章節，以及
+`E2E-8`／`E2E-9`／`E2E-10`（沒有占用 E2E-6）。對應測試檔的測試名稱也已改為
+正式編號開頭，重新跑過 `npm run verify` 與 `npm run e2e` 皆綠燈。
+詳見本文件最下方「待人類決策的問題」段落。
+
 ### 驗收條件
 
 - [x] 新增的自訂測案（domain + persistence + E2E）全數通過，測試名稱標明「Phase 6 新增，非
@@ -642,10 +648,8 @@ TASKS.md 原先標註本 phase「對應測案：E2E-6」，但 `TESTCASES.md` �
 
 **已知但不影響本 phase 驗收的坑（留給 Phase 7 注意）：**
 
-- **本 phase 最重要的一件事**：`TESTCASES.md` 完全沒有 Phase 6 功能（分類管理 CRUD、統計圖表）
-  的 E2E 契約。已在 PR 描述提出，等待人類決定是否要把 `tests/e2e/categories-stats.spec.ts`
-  的測案正式編號收錄進 `TESTCASES.md`（如果要收錄，編號建議另闢一節，不要占用 E2E-6，
-  因為那個編號已經是「備份與還原」的契約）。
+- ~~本 phase 最重要的一件事：`TESTCASES.md` 完全沒有 Phase 6 功能的 E2E 契約~~
+  **已解決**——人類決定收錄，`TESTCASES.md` 已補上正式編號（見上方「更新」段落）。
 - **自訂幣別小數位數（D6）仍未解決**——Phase 1～5 交接筆記都提過，這個 phase 一樣沒碰。
   `WalletForm` 的幣別下拉仍只列 `KNOWN_CURRENCIES` 20 種，使用者無法建立自訂幣別錢包，
   所以這顆坑目前仍是被 UI 擋住、不是被解決。
@@ -655,8 +659,8 @@ TASKS.md 原先標註本 phase「對應測案：E2E-6」，但 `TESTCASES.md` �
   時長條圖會全部貼底，但不會 crash，已用 `Math.max(1, ...)` 防呆避免除以 0）。
 
 **沒有需要人類決策的「規格矛盾」事項** —— SPEC.md 本身沒有矛盾。
-唯一需要人類決策的是上面提到的「TESTCASES.md 缺少本 phase 的 E2E 契約」這個缺漏，
-已在 PR 描述提出，不阻塞本 phase 的功能驗收（新增的自訂測案已完整覆蓋實際行為）。
+唯一需要人類決策的「TESTCASES.md 缺少本 phase 的 E2E 契約」已由人類回覆解決
+（見上方「更新」段落），不再是待辦事項。
 
 ---
 
@@ -674,16 +678,17 @@ PWA manifest + service worker、匯出／匯入 UI、備份提醒、深色模式
 > Agent 發現規格矛盾或需要批准時，寫在這裡，並同時寫進 PR 描述。
 > 人類回覆後會把該項移除。
 
-### Phase 6：TESTCASES.md 缺少分類管理／統計圖表的 E2E 契約
+_（目前無）_
 
-TASKS.md 原本標註 Phase 6「對應測案：E2E-6」，但 `TESTCASES.md` 的 E2E-6 實際上是
-「備份與還原」（Phase 7 範圍的功能），跟 Phase 6 的分類管理 CRUD、分類支出佔比圓餅圖、
-近 8 週趨勢長條圖完全無關。`TESTCASES.md` 對這些 Phase 6 功能**沒有任何 E2E 測案**。
+### ✅ 已解決：Phase 6：TESTCASES.md 缺少分類管理／統計圖表的 E2E 契約
 
-這不是「測案與規格矛盾」，而是「規格缺漏」——沒有測案要求相反行為，所以沒有停止工作，
-而是新增了自訂測案（`tests/e2e/categories-stats.spec.ts`，測試名稱用描述性中文，
-不假冒官方編號）涵蓋實際功能。
+人類已回覆：**收錄**。`TESTCASES.md` 已補上：
+- `T2.6`（shiftIsoDate）、`T3.6`（summarizeWeeklyTrend）、`T4.1.7`（預設分類不可刪除）
+- 新的 `T5 — Month`、`T6 — Category` 兩個 domain 章節
+- `E2E-8`、`E2E-9`、`E2E-10`（分類管理 CRUD、預設分類保護、統計圖表資料正確性），
+  沒有占用 E2E-6（維持是「備份與還原」的官方契約）
 
-**需要人類決定：** 要不要把這些自訂測案正式編號、收錄進 `TESTCASES.md`？
-如果要收錄，建議另闢新的一節（例如 E2E-8 或獨立的「分類與統計」小節），
-不要占用 E2E-6（那個編號已經是「備份與還原」的官方契約，Phase 7 會用到）。
+對應的測試檔（`tests/domain/week.test.ts`、`month.test.ts`、`budget.test.ts`、
+`category.test.ts`、`tests/persistence/category-repository.test.ts`、
+`tests/e2e/categories-stats.spec.ts`）測試名稱已改為正式編號開頭，
+`npm run verify` 與 `npm run e2e` 重新驗證皆綠燈。此項已解決，不再需要人類決策。

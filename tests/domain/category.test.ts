@@ -69,14 +69,14 @@ describe('reassignDeletedCategory — 分類刪除後交易轉移到未分類（
   })
 })
 
-describe('assertCanDeleteCategory — 系統預設分類不可刪除（SPEC.md §3.3，Phase 6 新增，非 TESTCASES.md 契約項目）', () => {
-  it('isDefault 為 true 時拋出 DefaultCategoryError', () => {
+describe('T6.1 — 分類刪除規則（assertCanDeleteCategory，Phase 6 新增）', () => {
+  it('T6.1.1 — isDefault 為 true 時拋出 DefaultCategoryError', () => {
     expect(() => assertCanDeleteCategory({ ...baseCategory, isDefault: true })).toThrow(
       DefaultCategoryError,
     )
   })
 
-  it('isDefault 為 false 時不拋錯', () => {
+  it('T6.1.2 — isDefault 為 false 時不拋錯', () => {
     expect(() => assertCanDeleteCategory({ ...baseCategory, isDefault: false })).not.toThrow()
   })
 })

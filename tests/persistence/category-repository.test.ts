@@ -70,8 +70,8 @@ describe('CategoryRepository — 刪除分類時交易轉移到未分類（SPEC.
   })
 })
 
-describe('CategoryRepository — 系統預設分類不可刪除（SPEC.md §3.3，Phase 6 新增，非 TESTCASES.md 契約項目）', () => {
-  it('刪除預設分類時拋出 DefaultCategoryError，分類與交易皆不受影響', async () => {
+describe('T4.1.7 — 系統預設分類不可刪除（SPEC.md §3.3，Phase 6 新增）', () => {
+  it('T4.1.7 — 刪除預設分類時拋出 DefaultCategoryError，分類與交易皆不受影響', async () => {
     const db = freshDb()
     const repos = createRepositories(db)
     const [firstCategory] = await repos.categories.list()
