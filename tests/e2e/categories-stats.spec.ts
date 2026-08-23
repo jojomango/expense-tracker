@@ -1,12 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * Phase 6（分類與統計）自行新增的 E2E 測案。
+ * TESTCASES.md E2E-8、E2E-9、E2E-10（分類與統計，Phase 6 新增）。
  *
- * TESTCASES.md 沒有對應本 phase（分類管理 CRUD、統計圖表）的 E2E 契約——
- * TASKS.md 原先標註的「E2E-6」實際上是 TESTCASES.md 的「備份與還原」（Phase 7 範圍），
- * 這是規格與測試契約之間的缺漏，已在 PR 描述的「需要人類決策」段落提出。
- * 依 CLAUDE.md「可以新增 TESTCASES.md 沒有的測案」的原則，補上以下測試涵蓋本 phase 功能，
+ * 這三個測案原本不存在於 TESTCASES.md——TASKS.md 曾誤標 Phase 6 對應「E2E-6」，
+ * 但那其實是「備份與還原」的官方契約（Phase 7 範圍）。經人類決策後正式編號收錄。
  * 圖表本身不做像素比對，只驗證資料正確（透過 data-testid 屬性讀取數值）。
  */
 
@@ -33,7 +31,7 @@ async function addExpense(page: Page, amount: string, categoryLabel: string, dat
   await page.getByRole('button', { name: '送出' }).click()
 }
 
-test('分類管理：新增分類、系統預設分類不可刪除', async ({ page }) => {
+test('E2E-8 — 分類管理：新增分類、系統預設分類不可刪除', async ({ page }) => {
   page.on('dialog', (dialog) => dialog.accept())
   await createFirstWallet(page)
 
@@ -57,7 +55,7 @@ test('分類管理：新增分類、系統預設分類不可刪除', async ({ pa
   await expect(page.getByText('🍜 飲食')).toBeVisible()
 })
 
-test('分類管理：刪除有交易的自訂分類時，交易轉移到未分類', async ({ page }) => {
+test('E2E-9 — 分類管理：刪除有交易的自訂分類時，交易轉移到未分類', async ({ page }) => {
   page.on('dialog', (dialog) => dialog.accept())
   await createFirstWallet(page)
 
@@ -81,7 +79,7 @@ test('分類管理：刪除有交易的自訂分類時，交易轉移到未分�
   await expect(page.getByTestId('transaction-item').first()).toContainText('未分類')
 })
 
-test('統計：本週／本月分類支出佔比與近 8 週趨勢資料正確', async ({ page }) => {
+test('E2E-10 — 統計：本週／本月分類支出佔比與近 8 週趨勢資料正確', async ({ page }) => {
   // weekStartDay 預設為 1（週一），今天 2026-08-11（二）→ 本週 2026-08-10 ~ 2026-08-16。
   await page.clock.install({ time: new Date('2026-08-11T12:00:00Z') })
   await createFirstWallet(page)
