@@ -14,7 +14,8 @@ import type { Settings } from '../domain/settings'
 import { DEFAULT_SETTINGS } from '../domain/settings'
 import type { CurrencyCode } from '../domain/currency'
 import type { IsoDate } from '../domain/iso-date'
-import { repos } from './repositories'
+import { serializeBackup, formatBackupFilename, type BackupData } from '../domain/backup'
+import { repos, backupRepo } from './repositories'
 
 export { LastWalletError }
 
@@ -63,6 +64,11 @@ interface AppState {
   addCategory: (input: { name: string; type: CategoryType; icon: string }) => Promise<void>
   updateCategory: (category: Category) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
+
+  /** 匯出備份（SPEC.md §3.6）。回傳檔名與 JSON 內容，下載交給 UI 層處理。 */
+  exportBackup: () => Promise<{ filename: string; content: string }>
+  /** 匯入備份（SPEC.md §3.6）；replace 清空後匯入，merge 以 id 合併。 */
+  importBackup: (mode: 'replace' | 'merge', text: string) => Promise<void>
 }
 
 function nowIso(): string {
@@ -77,12 +83,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
 
   async load() {
-    const [wallets, transactions, categories, settings] = await Promise.all([
+    const [wallets, transactions, categories, loadedSettings] = await Promise.all([
       repos.wallets.list(),
       repos.transactions.list(),
       repos.categories.list(),
       repos.settings.get(),
     ])
+    // SPEC.md §3.6 備份提醒的計時起點：這台裝置第一次啟動時記錄一次，之後不再變動。
+    let settings = loadedSettings
+    if (settings.firstLaunchAt === null) {
+      settings = { ...settings, firstLaunchAt: nowIso() }
+      await repos.settings.update(settings)
+    }
     set({ wallets, transactions, categories, settings, status: 'ready' })
   },
 
@@ -215,6 +227,29 @@ export const useAppStore = create<AppState>((set, get) => ({
       categories: state.categories.filter((c) => c.id !== id),
       transactions: reassignDeletedCategory(state.transactions, id),
     }))
+  },
+
+  async exportBackup() {
+    const data: BackupData = await backupRepo.exportData()
+    const content = serializeBackup(data)
+    const now = new Date()
+    const filename = formatBackupFilename(now)
+
+    const { settings } = get()
+    const nextSettings: Settings = { ...settings, lastBackupAt: now.toISOString() }
+    await repos.settings.update(nextSettings)
+    set({ settings: nextSettings })
+
+    return { filename, content }
+  },
+
+  async importBackup(mode, text) {
+    if (mode === 'replace') {
+      await backupRepo.importReplace(text)
+    } else {
+      await backupRepo.importMerge(text)
+    }
+    await get().load()
   },
 }))
 

@@ -39,7 +39,7 @@ function CategoryPieChart({
   }, [wallet, transactions, range])
 
   if (entries.length === 0) {
-    return <p className="py-8 text-center text-sm text-slate-400">這段期間沒有支出紀錄</p>
+    return <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">這段期間沒有支出紀錄</p>
   }
 
   let cumulativePercent = 0
@@ -84,7 +84,7 @@ function CategoryPieChart({
                 <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
                 {label}
               </span>
-              <span className="text-slate-500">
+              <span className="text-slate-500 dark:text-slate-400">
                 {format(Money.of(entry.amount, wallet.currency))}（{entry.percent}%）
               </span>
             </li>
@@ -130,7 +130,7 @@ function WeeklyTrendChart() {
           )
         })}
       </svg>
-      <ul data-testid="weekly-trend-legend" className="grid grid-cols-4 gap-1 text-xs text-slate-500">
+      <ul data-testid="weekly-trend-legend" className="grid grid-cols-4 gap-1 text-xs text-slate-500 dark:text-slate-400">
         {trend.map((entry) => (
           <li key={entry.start} data-testid="weekly-trend-legend-item" data-week-start={entry.start} data-amount={entry.total.amount}>
             {entry.start.slice(5)}
@@ -150,7 +150,7 @@ export default function Stats() {
   const [rangeMode, setRangeMode] = useState<RangeMode>('week')
 
   if (!wallet) {
-    return <p className="p-6 text-center text-slate-400">沒有可用的錢包</p>
+    return <p className="p-6 text-center text-slate-400 dark:text-slate-500">沒有可用的錢包</p>
   }
 
   const today = todayIso(new Date())
@@ -160,9 +160,9 @@ export default function Stats() {
     <div className="mx-auto max-w-md space-y-6 p-4">
       <h1 className="text-xl font-semibold">統計</h1>
 
-      <div className="space-y-2 rounded-lg bg-white p-4 shadow">
+      <div className="space-y-2 rounded-lg bg-white p-4 shadow dark:bg-slate-900">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-500">分類支出佔比</h2>
+          <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">分類支出佔比</h2>
           <div className="flex gap-1">
             <button
               type="button"
@@ -185,8 +185,8 @@ export default function Stats() {
         <CategoryPieChart wallet={wallet} transactions={transactions} range={range} />
       </div>
 
-      <div className="space-y-2 rounded-lg bg-white p-4 shadow">
-        <h2 className="text-sm font-medium text-slate-500">近 8 週支出趨勢</h2>
+      <div className="space-y-2 rounded-lg bg-white p-4 shadow dark:bg-slate-900">
+        <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">近 8 週支出趨勢</h2>
         <WeeklyTrendChart />
       </div>
     </div>

@@ -18,7 +18,7 @@
 | 4 | 基礎 UI：錢包與交易 CRUD | ✅ DONE | [#5](https://github.com/jojomango/expense-tracker/pull/5) |
 | 5 | 預算與即時餘額 | ✅ DONE | [#6](https://github.com/jojomango/expense-tracker/pull/6) |
 | 6 | 分類與統計 | ✅ DONE | [#7](https://github.com/jojomango/expense-tracker/pull/7) |
-| 7 | PWA、備份與打磨 | **NEXT** | |
+| 7 | PWA、備份與打磨 | ✅ DONE | |
 
 ---
 
@@ -664,12 +664,187 @@ TASKS.md 原先標註本 phase「對應測案：E2E-6」，但 `TESTCASES.md` �
 
 ---
 
-## Phase 7 — PWA、備份與打磨 ⬜ TODO
+## Phase 7 — PWA、備份與打磨 ✅ DONE
 
 PWA manifest + service worker、匯出／匯入 UI、備份提醒、深色模式、
 空狀態／載入狀態／錯誤處理、無障礙檢查。
 
 對應測案：**E2E-6、E2E-7**
+
+### 驗收條件
+
+- [x] E2E-6、E2E-7 全數通過（Chromium + Mobile Chrome，共 30 個 E2E 測試全綠，
+      含本 phase 新增的 8 個：E2E-6 × 2、E2E-7 × 2，另加 2 個非契約項目
+      「深色模式」「備份提醒」）
+- [x] `npm run verify` 通過（`check:domain` → `lint` → `typecheck` → `test:cov` → `build`），
+      domain 覆蓋率 96.66%（門檻 90%）
+- [x] `npm run e2e` 通過（本機沙盒沿用 Phase 1 交接筆記的 `playwright.local.config.ts`
+      workaround 驗證，驗完已刪除、未提交）
+- [x] `src/domain/` 仍然零外部依賴（`check:domain` 通過，14 個 domain 檔案）
+- [x] 沒有新增 SPEC.md §5 表格以外的相依套件——`vite-plugin-pwa` 本來就在
+      §5 清單內、且原本就是 `package.json` 既有的 devDependency（Phase 0 就裝好了，
+      這個 phase 只是第一次真正拿來用），沒有 `npm install` 任何新東西
+      （`package.json` / `package-lock.json` 這個 phase完全沒有變動）
+
+### 交接筆記
+
+**產出：**
+
+- `vite.config.ts` 加上 `VitePWA` plugin（`registerType: 'autoUpdate'`,
+  `injectRegister: 'auto'`，`workbox.skipWaiting/clientsClaim: true`）。
+  `skipWaiting`＋`clientsClaim` 是刻意加的：沒有這兩個設定，Workbox 預設要使用者
+  手動重新整理兩次 SW 才會真的接管分頁，飛航模式測試會很不穩定；加了之後
+  新 SW 裝好立刻接管現有分頁，`npm run build && npm run preview` 後第一次
+  `page.reload()` 就能穩定進入離線快取狀態。
+- `scripts/generate-icons.mjs` — 一次性工具，用 Node 內建 `zlib.deflateSync` 手刻
+  最小可用的 PNG encoder（無任何圖像函式庫，符合禁令 3），畫一個深色背景＋
+  置中圓形的簡單圖示，輸出 `public/icons/icon-192.png`／`icon-512.png`。
+  圓半徑抓畫布 32%，同一張圖同時當 `any` 與 `maskable` 兩種 manifest icon
+  purpose 共用也安全。圖示改版時重新執行 `node scripts/generate-icons.mjs`
+  即可，不在 `npm run verify` 流程內。
+- `index.html` 加 `<link rel="icon">` / `<link rel="apple-touch-icon">`，
+  href 用 Vite 的 `%BASE_URL%` 樣板變數（不是寫死 `/icons/...`），
+  否則 GitHub Pages 子路徑部署（`VITE_BASE=/expense-tracker/`）圖示會 404。
+- `src/domain/backup-reminder.ts`（新模組）— `shouldRemindBackup(state, now)`
+  純函式，SPEC.md §3.6「每 7 天提醒一次備份」的判斷邏輯：有備份過就從
+  `lastBackupAt` 起算，沒備份過就從 `firstLaunchAt` 起算，兩者都沒有
+  （代表這台裝置甚至還沒走過 `load()`）就不提醒。非 TESTCASES.md 契約項目，
+  測試名稱用描述性中文（比照 Phase 2/6 對「規格沒給正式編號的純函式」的處理方式）。
+- `src/domain/settings.ts` 的 `Settings` 新增兩個欄位：`firstLaunchAt` 與
+  `lastBackupAt`（皆為 `string | null` 的 ISO 時間戳，預設 `null`）。
+  **這是對既有型別的擴充**，不是 breaking change——Dexie 的 `settingsTable`
+  只宣告了 `id` 一個索引欄位（見 `db.ts`），新增一般欄位不需要 schema
+  migration（沒有動 `.version()`），舊資料讀出來這兩個欄位會是 `undefined`，
+  但 `SettingsRepository.get()` 在讀不到列時本來就回退 `DEFAULT_SETTINGS`，
+  UI 端用到這兩個欄位時也都用 `??`／型別上允許 `null` 處理，沒有炸開的風險。
+- `src/domain/backup.ts` 新增 `formatBackupFilename(now: Date)`——SPEC.md §3.6
+  的檔名格式 `expense-backup-YYYYMMDD-HHmm.json`，一律用 UTC 曆日／時分
+  （延續全專案「日期一律 UTC 運算」的慣例，避免檔名與使用者實際操作時間
+  因時區對不上）。Phase 3 交接筆記說這件事「留給 Phase 7」，這個 phase 補上。
+- `src/app/repositories.ts` 新增 `export const backupRepo = createBackupRepository(db)`
+  ——Phase 3 就寫好的 `BackupRepository` 一直沒有被 app 層用到，這個 phase
+  第一次接上。
+- `src/app/store.ts`：
+  - `load()` 在 `settings.firstLaunchAt === null` 時寫入一次 `now`（並持久化），
+    這是備份提醒計時的起點，全專案唯一一處在 app 層自己取 `new Date()`
+    產生「首次啟動時間」的地方（domain 層完全不知道這件事的存在）。
+  - 新增 `exportBackup()`：呼叫 `backupRepo.exportData()` → `serializeBackup` →
+    同時把 `settings.lastBackupAt` 更新成現在時間並持久化（這是備份提醒
+    「備份過就重新計時」的來源）→ 回傳 `{ filename, content }` 給 UI 觸發下載。
+    **注意：`exportBackup()` 本身不觸碰 DOM／`Blob`／`<a download>`**——那些是
+    `Settings.tsx` 的責任，store 只回傳資料，維持「ui 只轉發事件，邏輯在
+    app/domain」的分層（CLAUDE.md 目錄職責）。
+  - 新增 `importBackup(mode, text)`：呼叫 `backupRepo.importReplace/importMerge`，
+    成功後 `await get().load()` 整個重新載入 store（不做欄位級別的增量更新，
+    因為 import 之後幾乎所有資料都可能變了，重新 `load()` 最簡單也最不容易漏東西）。
+- `src/ui/Settings.tsx` 大幅擴充，新增三個子元件：
+  - `BackupReminderBanner`——用 `shouldRemindBackup` 判斷是否顯示，
+    `role="status" aria-live="polite"`（無障礙：內容變化時螢幕報讀器會念出來）。
+    「稍後」按鈕只是這次 session 內的本地 `dismissed` state，**沒有持久化**——
+    下次重新整理或超過 7 天還是會再出現，這是刻意的簡化（SPEC.md 沒有要求
+    「永久關閉提醒」這種語意，避免多存一個從未被讀取驗證過的旗標）。
+  - `ExportSection`——`downloadTextFile` 用標準的
+    `Blob` + `URL.createObjectURL` + 動態 `<a download>` + `click()` 技巧觸發下載，
+    Playwright 的 `page.waitForEvent('download')` 抓得到。
+  - `ImportSection`——merge / replace 兩個模式，replace 需要輸入
+    `REPLACE_CONFIRM_PHRASE = '確認取代'` 這個確認字串才會送出（SPEC.md §3.6
+    「需輸入確認字串」）。錯誤處理用 `role="alert"` 顯示 `BackupError` 的
+    `message`（`BackupParseError`／`BackupVersionError`／`BackupValidationError`
+    都繼承自它，見 Phase 3 的 `backup.ts`），不是 `window.alert`——
+    比 `Wallets.tsx`／`Categories.tsx` 既有的 `window.alert` 模式更貼近
+    「無障礙基本檢查」的精神，但這個 phase**沒有回頭把 `Wallets.tsx`／
+    `Categories.tsx` 既有的 `window.alert`／`window.confirm` 改掉**
+    （不屬於本 phase 範圍，CLAUDE.md：不多做，見下方「已知的坑」）。
+- `src/ui/ErrorBoundary.tsx`（新元件）——class component（React error boundary
+  只能用 class 語法），包住 `App.tsx` 的 `<Routes>`。捕捉到 render 錯誤時顯示
+  「你的資料仍安全保存在裝置上」＋重新整理按鈕，而不是整頁白畫面。
+  沒有測案覆蓋這個元件（要模擬一個真的會 throw 的畫面才能測，覺得不值得為了
+  測試特地在產品碼裡埋一個假的錯誤觸發點），純粹是防禦性的打磨。
+- `src/app/App.tsx` 新增 `useAppliedTheme()`：依 `settings.theme` 把 `dark` class
+  切到 `<html>`（Tailwind 本來就設定 `darkMode: 'class'`，這個 phase 之前
+  完全沒有任何地方讀過 `theme` 這個既有欄位）。`system` 模式訂閱
+  `window.matchMedia('(prefers-color-scheme: dark)')` 的 `change` 事件即時反應；
+  `light`／`dark` 模式不訂閱（固定套用，不受系統設定影響）。
+  這是全專案第一個、也是唯一一個讀 `window.matchMedia` 的地方——理所當然放在
+  app 層而不是 domain 層。
+- **深色模式的視覺樣式**：`App.tsx` 的版面外殼（`bg-slate-50`／`bg-white` header）
+  與 `Settings.tsx` 全部元件都補了 `dark:` variant；另外對
+  `TransactionList`／`Home`／`Stats`／`Categories`／`Wallets` 幾個畫面上
+  重複出現的卡片背景（`bg-white` → 加 `dark:bg-slate-900`）與次要文字色
+  （`text-slate-400`／`text-slate-500` → 加對應的 dark variant）也補了樣式；
+  `WalletForm`／`TransactionForm`／`CategoryForm` 的輸入框邊框／背景
+  （`border-slate-300` → 加 `dark:border-slate-600 dark:bg-slate-800`）同樣補上。
+  **這不是逐像素的深色模式視覺驗收**，只是「主要畫面在深色模式下不會出現
+  刺眼的白底黑字」這個程度的打磨，沒有窮舉每一個可能的邊界樣式（例如
+  `Stats.tsx` 圓餅圖／長條圖的 SVG 顏色是寫死的 hex 色票，在深色卡片背景上
+  沒有特別處理，但目測可讀，沒有回頭改）。
+- 新增 `tests/e2e/backup-pwa.spec.ts`（8 個測試）：
+  - E2E-6 × 2：完整匯出→（模擬換裝置的全新 `browser.newContext()`）→
+    replace 匯入→驗證兩個錢包、餘額、`weekStartDay` 設定皆還原；以及
+    「不輸入確認字串會被拒絕」的反例。
+  - E2E-7 × 2：飛航模式（`context.setOffline(true)`）下重新整理仍可讀取既有
+    資料、正常新增交易、期間沒有任何 `requestfailed`；以及 manifest 內容的
+    靜態檢查（name／icons／`display: standalone`）。
+  - 另外 2 個非契約項目：深色模式切換即時生效、備份提醒的顯示／消失時機。
+
+**設計決策：**
+
+- **備份提醒沒有獨立的「已讀」/「永久關閉」欄位**——只用 `lastBackupAt` 一個
+  欄位驅動「該不該提醒」，dismiss 只影響當次瀏覽的 React state。如果之後
+  人類覺得「每次打開都跳提醒太煩」，可以加一個 `lastReminderDismissedAt`
+  欄位，`shouldRemindBackup` 多一個參數即可，不需要重新設計。
+- **`exportBackup()` 同時更新 `lastBackupAt`，`importBackup()` 不會**——
+  import 匯入的 `settings.lastBackupAt` 就是備份檔裡記錄的值（來源裝置的
+  備份時間），這是合理的：匯入不等於「我剛剛在這台裝置備份過」，讓提醒
+  邏輯繼續照原本的節奏走。
+- **PWA 圖示是手繪 SVG 風格的簡單色塊＋圓形，不是設計過的品牌圖示**——
+  SPEC.md 沒有規定圖示長相，且禁令 3 不能為了產生圖示而引入任何圖像處理
+  套件（sharp、canvas 之類的都不在 §5 清單內）。如果人類想要更精緻的圖示，
+  只要把 `public/icons/icon-*.png` 換成設計好的檔案即可，`vite.config.ts`
+  的 manifest 設定不用動。
+
+**已知但不影響本 phase 驗收的坑（留給後續打磨或人類決策）：**
+
+- **E2E-7「Android Chrome 顯示加到主畫面選項、安裝後獨立視窗啟動」這半句
+  規格本質上無法用 Playwright 自動化驗證**——瀏覽器的「加到主畫面」
+  install prompt 是瀏覽器 UI 層級的行為，不是頁面內可觀測的 DOM 狀態，
+  Playwright（甚至任何無頭測試框架）都無法真的觸發／斷言這個系統 UI。
+  這個 phase 用「manifest 內容符合可安裝條件的靜態檢查」（name／icons／
+  `display: standalone` 都存在且格式正確）加上「SW 確實安裝並接管分頁」
+  當作可自動化的替代驗證，**但這不等同於在真實 Android 裝置上手動確認
+  「加到主畫面」與「獨立視窗啟動」這兩件事**。誠實記錄：這半句 SPEC 的
+  完整驗收需要人類在實機（或至少桌面 Chrome 的 DevTools › Application ›
+  Manifest 面板）手動確認一次，自動化測試做不到。這不是規格矛盾，是
+  Playwright 這個工具本身的能力邊界。
+- **`Wallets.tsx`／`Categories.tsx` 既有的 `window.confirm`／`window.alert`
+  沒有這個 phase 順手改掉**——本來想比照 `Settings.tsx` 新的 `ImportSection`
+  用行內 `role="alert"` 取代，讓整個 app 的錯誤／確認 UI 風格一致，但這會
+  同時動到 Phase 4／Phase 6 已經有 E2E 測試覆蓋的畫面（改動風險不小，
+  且不屬於「PWA、備份與打磨」這個 phase 明確要做的事），刻意沒做。
+  如果人類希望统一風格，這是下一輪打磨可以做的事，不需要新的 phase。
+- **深色模式沒有做到逐畫面的像素級驗收**，見上方「產出」段落最後一項的說明。
+  `Stats.tsx` 的 SVG 圖表顏色（色票、長條圖 `fill="#2563eb"`）在深色卡片
+  背景下沒有特別調整，目測可讀但沒有嚴謹驗證對比度。
+- **無障礙檢查是「輕量通過」，不是完整稽核**——這個 phase 沒有引入任何
+  無障礙檢查工具（axe-core 之類的都不在 §5 清單內，且會是新相依套件，
+  違反禁令 3），只靠人工檢查現有畫面的 `label`/`htmlFor` 對應（本來就有）、
+  按鈕都有可讀文字（本來就有）、新增的提醒 banner 用 `role="status"
+  aria-live="polite"`、錯誤訊息用 `role="alert"`。沒有做色彩對比度計算、
+  沒有做鍵盤導覽的系統性測試、沒有做螢幕報讀器的實機測試。
+- **自訂幣別小數位數（SPEC.md §7 D6）仍未解決**——Phase 1～6 交接筆記
+  都提過，這個 phase 一樣沒碰，`WalletForm` 幣別下拉仍只列 20 種內建幣別，
+  使用者無法建立自訂幣別錢包，這顆坑目前仍是被 UI 擋住、不是被解決。
+
+**沒有需要人類決策的「規格矛盾」事項**——SPEC.md 本身沒有矛盾，
+`TESTCASES.md` 的 E2E-6／E2E-7 這次也都對得上實際功能（跟 Phase 6 開工時
+發現的「E2E-6 被誤標成本 phase」那次不一樣，這次 TASKS.md 本來就正確標註
+E2E-6／E2E-7 屬於 Phase 7）。上面列的都是「規格沒細講、或工具本身有能力
+邊界」的誠實記錄，不阻塞驗收。
+
+至此 SPEC.md §6 列出的 Phase 0～7 全數完成。**下一步如果還有工作，
+屬於「v1 範圍外的打磨」或人類自訂的新 phase**，不在目前 TASKS.md 的
+狀態機描述範圍內——人類需要決定要不要開一個新的 Phase 8（例如：
+統一錯誤處理風格、無障礙完整稽核、自訂幣別支援、實機 PWA 安裝驗收）。
 
 ---
 

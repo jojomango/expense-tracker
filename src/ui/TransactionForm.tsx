@@ -108,7 +108,7 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
         <input
           id="transaction-amount"
           inputMode="decimal"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={amountInput}
           onChange={(e) => setAmountInput(e.target.value)}
           required
@@ -121,7 +121,7 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
         </label>
         <select
           id="transaction-category"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
         >
@@ -140,7 +140,7 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
         <input
           id="transaction-date"
           type="date"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={date}
           onChange={(e) => setDate(toIsoDate(e.target.value))}
           required
@@ -153,7 +153,7 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
         </label>
         <input
           id="transaction-note"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />

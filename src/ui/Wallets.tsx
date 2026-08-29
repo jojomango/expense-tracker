@@ -43,7 +43,7 @@ export default function Wallets() {
 
       <ul className="space-y-2">
         {wallets.map((w) => (
-          <li key={w.id} className="rounded-lg bg-white p-4 shadow">
+          <li key={w.id} className="rounded-lg bg-white p-4 shadow dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">
@@ -51,9 +51,9 @@ export default function Wallets() {
                   {w.id === currentWallet?.id && (
                     <span className="ml-2 text-xs text-emerald-600">（目前）</span>
                   )}
-                  {w.archived && <span className="ml-2 text-xs text-slate-400">（已封存）</span>}
+                  {w.archived && <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">（已封存）</span>}
                 </p>
-                <p className="text-sm text-slate-500">{w.currency}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{w.currency}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {w.id !== currentWallet?.id && !w.archived && (

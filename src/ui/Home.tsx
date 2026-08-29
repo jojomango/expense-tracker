@@ -28,11 +28,11 @@ function BalanceCard() {
     const result = calculateWeeklyBalance(wallet, transactions, weekStartDay, now)
     if (!result) return null
     return (
-      <div className="rounded-lg bg-white p-4 shadow">
-        <p className="text-sm text-slate-500">本週餘額</p>
+      <div className="rounded-lg bg-white p-4 shadow dark:bg-slate-900">
+        <p className="text-sm text-slate-500 dark:text-slate-400">本週餘額</p>
         <p
           data-testid="weekly-balance"
-          className={`text-2xl font-semibold ${result.isOverBudget ? 'text-red-600' : 'text-slate-900'}`}
+          className={`text-2xl font-semibold ${result.isOverBudget ? 'text-red-600' : 'text-slate-900 dark:text-slate-100'}`}
         >
           {format(result.balance)}
         </p>
@@ -45,15 +45,15 @@ function BalanceCard() {
     const result = calculateTotalBalance(wallet, transactions)
     if (!result) return null
     return (
-      <div className="rounded-lg bg-white p-4 shadow">
-        <p className="text-sm text-slate-500">剩餘總預算</p>
+      <div className="rounded-lg bg-white p-4 shadow dark:bg-slate-900">
+        <p className="text-sm text-slate-500 dark:text-slate-400">剩餘總預算</p>
         <p
           data-testid="total-balance"
-          className={`text-2xl font-semibold ${result.isOverBudget ? 'text-red-600' : 'text-slate-900'}`}
+          className={`text-2xl font-semibold ${result.isOverBudget ? 'text-red-600' : 'text-slate-900 dark:text-slate-100'}`}
         >
           {format(result.balance)}
         </p>
-        <p className="text-sm text-slate-500">已用 {result.usedPercent}%</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">已用 {result.usedPercent}%</p>
         {result.isOverBudget && <OverBudgetNotice />}
       </div>
     )
@@ -61,8 +61,8 @@ function BalanceCard() {
 
   const total = calculateWeeklyExpenseTotal(wallet, transactions, weekStartDay, now)
   return (
-    <div className="rounded-lg bg-white p-4 shadow">
-      <p className="text-sm text-slate-500">本週支出</p>
+    <div className="rounded-lg bg-white p-4 shadow dark:bg-slate-900">
+      <p className="text-sm text-slate-500 dark:text-slate-400">本週支出</p>
       <p data-testid="weekly-expense-total" className="text-2xl font-semibold">
         {format(total)}
       </p>
@@ -80,7 +80,7 @@ export default function Home() {
   const createWallet = useAppStore((s) => s.createWallet)
 
   if (status === 'loading') {
-    return <p className="p-6 text-center text-slate-400">載入中…</p>
+    return <p className="p-6 text-center text-slate-400 dark:text-slate-500">載入中…</p>
   }
 
   if (wallets.length === 0) {
@@ -96,7 +96,7 @@ export default function Home() {
   }
 
   if (!wallet) {
-    return <p className="p-6 text-center text-slate-400">沒有可用的錢包</p>
+    return <p className="p-6 text-center text-slate-400 dark:text-slate-500">沒有可用的錢包</p>
   }
 
   const walletTransactions = transactions.filter((t) => t.walletId === wallet.id)
@@ -107,7 +107,7 @@ export default function Home() {
         <h2 data-testid="current-wallet-name" className="text-lg font-semibold">
           {wallet.name}
         </h2>
-        <Link to="/wallets" className="text-sm text-slate-500 underline">
+        <Link to="/wallets" className="text-sm text-slate-500 underline dark:text-slate-400">
           管理錢包
         </Link>
       </div>
@@ -115,7 +115,7 @@ export default function Home() {
       <BalanceCard />
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-slate-500">交易紀錄</h3>
+        <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">交易紀錄</h3>
         <Link
           to="/transactions/new"
           data-testid="add-transaction-button"

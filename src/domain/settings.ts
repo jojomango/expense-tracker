@@ -13,6 +13,13 @@ export interface Settings {
   readonly theme: Theme
   /** 開啟 app 時預設顯示的錢包；null 代表尚未選定（例如還沒有任何錢包）。 */
   readonly defaultWalletId: string | null
+  /**
+   * app 第一次啟動的時間（ISO 時間戳）；null 代表這台裝置上還沒有記錄過。
+   * 供 SPEC.md §3.6「每 7 天提醒一次備份」在使用者從未備份過時當計時起點。
+   */
+  readonly firstLaunchAt: string | null
+  /** 最近一次成功匯出備份的時間（ISO 時間戳）；null 代表從未備份過。 */
+  readonly lastBackupAt: string | null
 }
 
 /** SPEC.md §3.5：weekStartDay 預設週一、theme 預設 system、defaultWalletId 預設第一個錢包。 */
@@ -20,4 +27,6 @@ export const DEFAULT_SETTINGS: Settings = {
   weekStartDay: 1,
   theme: 'system',
   defaultWalletId: null,
+  firstLaunchAt: null,
+  lastBackupAt: null,
 }
