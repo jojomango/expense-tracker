@@ -90,7 +90,13 @@ describe('BackupRepository — T4.2.7 大量資料匯入效能', () => {
         wallets: [wallet],
         categories: existingCategories,
         transactions,
-        settings: { weekStartDay: 1, theme: 'system', defaultWalletId: wallet.id },
+        settings: {
+          weekStartDay: 1,
+          theme: 'system',
+          defaultWalletId: wallet.id,
+          firstLaunchAt: null,
+          lastBackupAt: null,
+        },
       })
 
       const start = performance.now()

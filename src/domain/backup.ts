@@ -158,6 +158,24 @@ export function serializeBackup(data: BackupData): string {
   return JSON.stringify(data, null, 2)
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/**
+ * SPEC.md §3.6：匯出檔名 `expense-backup-YYYYMMDD-HHmm.json`。
+ * 一律用 UTC 曆日／時分（比照全專案「日期一律 UTC 運算」的慣例，避免時區造成
+ * 檔名與使用者實際匯出時間對不上）。
+ */
+export function formatBackupFilename(now: Date): string {
+  const y = now.getUTCFullYear()
+  const m = pad2(now.getUTCMonth() + 1)
+  const d = pad2(now.getUTCDate())
+  const hh = pad2(now.getUTCHours())
+  const mm = pad2(now.getUTCMinutes())
+  return `expense-backup-${y}${m}${d}-${hh}${mm}.json`
+}
+
 interface Identified {
   readonly id: string
   readonly updatedAt?: string

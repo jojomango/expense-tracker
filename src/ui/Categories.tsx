@@ -14,17 +14,17 @@ function CategoryGroup({
   const navigate = useNavigate()
   return (
     <div className="space-y-2">
-      <h2 className="text-sm font-medium text-slate-500">{title}</h2>
+      <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</h2>
       <ul className="space-y-2">
         {categories.map((c) => (
           <li
             key={c.id}
             data-testid="category-item"
-            className="flex items-center justify-between rounded-lg bg-white p-3 shadow"
+            className="flex items-center justify-between rounded-lg bg-white p-3 shadow dark:bg-slate-900"
           >
             <span>
               {c.icon} {c.name}
-              {c.isDefault && <span className="ml-2 text-xs text-slate-400">（系統預設）</span>}
+              {c.isDefault && <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">（系統預設）</span>}
             </span>
             <div className="flex items-center gap-3">
               <button

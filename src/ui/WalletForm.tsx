@@ -68,7 +68,7 @@ export default function WalletForm({
         </label>
         <input
           id="wallet-name"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -81,7 +81,7 @@ export default function WalletForm({
         </label>
         <select
           id="wallet-currency"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={currency}
           disabled={lockCurrency}
           onChange={(e) => setCurrency(e.target.value)}
@@ -100,7 +100,7 @@ export default function WalletForm({
         </label>
         <select
           id="wallet-budget-mode"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={budgetMode}
           onChange={(e) => setBudgetMode(e.target.value as BudgetMode)}
         >
@@ -120,7 +120,7 @@ export default function WalletForm({
           <input
             id="wallet-budget-amount"
             inputMode="decimal"
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
             value={budgetAmountInput}
             onChange={(e) => setBudgetAmountInput(e.target.value)}
             required

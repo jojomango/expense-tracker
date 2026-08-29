@@ -5,6 +5,7 @@ import {
   parseAndValidateBackup,
   serializeBackup,
   mergeBackups,
+  formatBackupFilename,
   BackupParseError,
   BackupVersionError,
   BackupValidationError,
@@ -171,5 +172,21 @@ describe('mergeBackups — 沒有 updatedAt 可比較的實體（Wallet / Catego
     const incoming = validBackup({ wallets: [{ ...wallet1, name: '改名後' }] })
     const merged = mergeBackups(existing, incoming)
     expect(merged.wallets).toEqual([{ ...wallet1, name: '改名後' }])
+  })
+})
+
+// Phase 7 新增，非 TESTCASES.md 契約項目——SPEC.md §3.6 規定檔名格式
+// `expense-backup-YYYYMMDD-HHmm.json`，但沒有對應的正式測案編號。
+describe('formatBackupFilename — SPEC.md §3.6 檔名格式', () => {
+  it('依 SPEC.md §3.6 格式化為 expense-backup-YYYYMMDD-HHmm.json（UTC）', () => {
+    expect(formatBackupFilename(new Date('2026-08-11T09:05:00Z'))).toBe(
+      'expense-backup-20260811-0905.json',
+    )
+  })
+
+  it('月／日／時／分個位數補零', () => {
+    expect(formatBackupFilename(new Date('2026-01-02T03:04:00Z'))).toBe(
+      'expense-backup-20260102-0304.json',
+    )
   })
 })

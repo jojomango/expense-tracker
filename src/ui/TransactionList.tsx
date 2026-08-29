@@ -56,7 +56,7 @@ export default function TransactionList({
           <h4 data-testid="week-group-header" className="mb-1 px-1 text-xs font-medium text-slate-400">
             {group.start} ~ {group.end}
           </h4>
-          <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg bg-white shadow">
+          <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg bg-white shadow dark:divide-slate-700 dark:bg-slate-900">
             {sortNewestFirst(group.items).map((t) => (
               <li
                 key={t.id}
@@ -69,7 +69,11 @@ export default function TransactionList({
                   {t.note && <p className="text-xs text-slate-400">{t.note}</p>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={t.type === 'expense' ? 'text-slate-900' : 'text-emerald-600'}>
+                  <span
+                    className={
+                      t.type === 'expense' ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600'
+                    }
+                  >
                     {t.type === 'expense' ? '-' : '+'}
                     {format(Money.of(t.amount, wallet.currency))}
                   </span>

@@ -52,7 +52,7 @@ export default function CategoryForm({
         </label>
         <input
           id="category-name"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -65,7 +65,7 @@ export default function CategoryForm({
         </label>
         <input
           id="category-icon"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           value={icon}
           onChange={(e) => setIcon(e.target.value)}
           required
