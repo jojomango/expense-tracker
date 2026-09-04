@@ -5,10 +5,14 @@ import {
   calculateTotalBalance,
   summarizeByCategory,
   summarizeWeeklyTrend,
+  daysLeftInWeek,
+  dailyAllowance,
 } from '../../src/domain/budget'
+import { Money } from '../../src/domain/money'
 import type { Wallet } from '../../src/domain/wallet'
 import type { Transaction } from '../../src/domain/transaction'
 import { toIsoDate, type IsoDate } from '../../src/domain/iso-date'
+import type { WeekStartDay } from '../../src/domain/week'
 
 const d = (s: string): IsoDate => toIsoDate(s)
 
@@ -337,5 +341,57 @@ describe('T3.6 — 近 N 週支出趨勢（summarizeWeeklyTrend，Phase 6 新增
 
   it('T3.6.6 — weeksCount 為 0 時回傳空陣列', () => {
     expect(summarizeWeeklyTrend(dailyWallet, [], WEEK_START, REFERENCE_DATE, 0)).toEqual([])
+  })
+})
+
+describe('daysLeftInWeek — T7.1（UI 改版，Phase 8 新增）', () => {
+  it('T7.1.1 — weekStartDay=1，週四，還剩 4 天（含當日）', () => {
+    expect(daysLeftInWeek(1, new Date('2026-09-03T12:00:00Z'))).toBe(4)
+  })
+
+  it('T7.1.2 — weekStartDay=1，週日（該週最後一天），還剩 1 天', () => {
+    expect(daysLeftInWeek(1, new Date('2026-09-06T12:00:00Z'))).toBe(1)
+  })
+
+  it('T7.1.3 — weekStartDay=1，週一（該週第一天），還剩 7 天', () => {
+    expect(daysLeftInWeek(1, new Date('2026-08-31T12:00:00Z'))).toBe(7)
+  })
+
+  it('T7.1.4 — weekStartDay=0，週日，還剩 7 天', () => {
+    expect(daysLeftInWeek(0, new Date('2026-09-06T12:00:00Z'))).toBe(7)
+  })
+
+  it('T7.1.5 — weekStartDay=0，週六，還剩 1 天', () => {
+    expect(daysLeftInWeek(0, new Date('2026-09-05T12:00:00Z'))).toBe(1)
+  })
+
+  it('T7.1.6 — weekStartDay=3，週四，還剩 6 天', () => {
+    expect(daysLeftInWeek(3 as WeekStartDay, new Date('2026-09-03T12:00:00Z'))).toBe(6)
+  })
+})
+
+describe('dailyAllowance — T7.2（UI 改版，Phase 8 新增）', () => {
+  it('T7.2.1 — 向下取整，不四捨五入', () => {
+    expect(dailyAllowance(Money.of(1146, 'TWD'), 4)).toEqual(Money.of(286, 'TWD'))
+  })
+
+  it('T7.2.2 — remaining 為 0 時回傳 0', () => {
+    expect(dailyAllowance(Money.of(0, 'TWD'), 4)).toEqual(Money.of(0, 'TWD'))
+  })
+
+  it('T7.2.3 — 已超支（remaining 為負）時回傳 0', () => {
+    expect(dailyAllowance(Money.of(-500, 'TWD'), 4)).toEqual(Money.of(0, 'TWD'))
+  })
+
+  it('T7.2.4 — daysLeft 為 1 時等於全部 remaining', () => {
+    expect(dailyAllowance(Money.of(1000, 'TWD'), 1)).toEqual(Money.of(1000, 'TWD'))
+  })
+
+  it('T7.2.5 — JPY（0 位小數）一樣向下取整', () => {
+    expect(dailyAllowance(Money.of(1000, 'JPY'), 3)).toEqual(Money.of(333, 'JPY'))
+  })
+
+  it('T7.2.6 — daysLeft 為 0 時拋 RangeError', () => {
+    expect(() => dailyAllowance(Money.of(1000, 'TWD'), 0)).toThrow(RangeError)
   })
 })

@@ -6,7 +6,7 @@
  * 由「只處理傳入 wallet.id 對應的交易」自然達成，不需要呼叫端事先過濾。
  */
 import { Money, subtract, sum, percentOf, type Money as MoneyType } from './money'
-import { weekRangeOf, shiftIsoDate, type WeekStartDay } from './week'
+import { weekRangeOf, shiftIsoDate, daysBetween, type WeekStartDay } from './week'
 import { todayIso, compareIsoDate, type IsoDate } from './iso-date'
 import type { Wallet } from './wallet'
 import type { Transaction, TransactionType } from './transaction'
@@ -129,6 +129,29 @@ export function summarizeWeeklyTrend(
   }
 
   return entries
+}
+
+/**
+ * 從 referenceDate 到本週結束（含當日）還有幾天（UI-SPEC.md §8，T7.1）。
+ * 一律以「本地曆日」計算（沿用 `todayIso` 的慣例），時間由參數注入，不得使用 `new Date()`。
+ */
+export function daysLeftInWeek(weekStartDay: WeekStartDay, referenceDate: Date): number {
+  const today = todayIso(referenceDate)
+  const { end } = weekRangeOf(today, weekStartDay)
+  return daysBetween(today, end) + 1
+}
+
+/**
+ * 剩餘預算 ÷ 剩餘天數，向下取整到最小單位；剩餘 ≤ 0 時回傳 0（UI-SPEC.md §8，T7.2）。
+ */
+export function dailyAllowance(remaining: MoneyType, daysLeft: number): MoneyType {
+  if (!Number.isInteger(daysLeft) || daysLeft <= 0) {
+    throw new RangeError(`daysLeft 必須為正整數: ${daysLeft}`)
+  }
+  if (remaining.amount <= 0) {
+    return Money.of(0, remaining.currency)
+  }
+  return Money.of(Math.floor(remaining.amount / daysLeft), remaining.currency)
 }
 
 /**

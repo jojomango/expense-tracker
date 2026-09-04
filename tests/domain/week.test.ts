@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weekRangeOf, groupByWeek, shiftIsoDate, type WeekStartDay } from '../../src/domain/week'
+import { weekRangeOf, groupByWeek, shiftIsoDate, daysBetween, type WeekStartDay } from '../../src/domain/week'
 import { toIsoDate, type IsoDate } from '../../src/domain/iso-date'
 
 const d = (s: string): IsoDate => toIsoDate(s)
@@ -181,5 +181,25 @@ describe('T2.6 — 日期位移（shiftIsoDate，Phase 6 新增）', () => {
 
   it('T2.6.4 — 位移跨閏年 2 月，正確處理', () => {
     expect(shiftIsoDate(d('2028-03-01'), -1)).toBe(d('2028-02-29'))
+  })
+})
+
+// UI 改版（Phase 8）新增，非 TESTCASES.md 契約項目——daysBetween 是 daysLeftInWeek
+// 用到的內部工具函式，本身沒有對應的正式測案編號，測試名稱用描述性中文。
+describe('daysBetween — 曆日差（UI 改版 Phase 8 新增）', () => {
+  it('to 較晚時回傳正數', () => {
+    expect(daysBetween(d('2026-09-03'), d('2026-09-06'))).toBe(3)
+  })
+
+  it('to 較早時回傳負數', () => {
+    expect(daysBetween(d('2026-09-06'), d('2026-09-03'))).toBe(-3)
+  })
+
+  it('相同日期回傳 0', () => {
+    expect(daysBetween(d('2026-09-03'), d('2026-09-03'))).toBe(0)
+  })
+
+  it('跨月正確', () => {
+    expect(daysBetween(d('2026-08-31'), d('2026-09-06'))).toBe(6)
   })
 })

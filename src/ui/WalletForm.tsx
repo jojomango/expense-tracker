@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { KNOWN_CURRENCIES, decimalsFor, type CurrencyCode } from '../domain/currency'
 import type { BudgetMode, Wallet } from '../domain/wallet'
 import { parse } from '../domain/money'
+import BackLink from './BackLink'
 
 const BUDGET_MODE_LABELS: Record<BudgetMode, string> = {
   none: '不設預算',
@@ -22,6 +23,8 @@ interface WalletFormProps {
   initial?: Wallet
   /** 建立後幣別不可修改（SPEC.md §7 D3），編輯既有錢包時鎖住幣別欄位。 */
   lockCurrency?: boolean
+  /** 有值才顯示返回連結；首次啟動引導（Home 的 onboarding 分支）不傳，因為無處可退。 */
+  backTo?: string
   onSubmit: (values: WalletFormValues) => Promise<void>
 }
 
@@ -30,6 +33,7 @@ export default function WalletForm({
   submitLabel,
   initial,
   lockCurrency = false,
+  backTo,
   onSubmit,
 }: WalletFormProps) {
   const [name, setName] = useState(initial?.name ?? '')
@@ -60,6 +64,7 @@ export default function WalletForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-sm space-y-4 p-6">
+      {backTo && <BackLink to={backTo} />}
       <h1 className="text-xl font-semibold">{heading}</h1>
 
       <div>

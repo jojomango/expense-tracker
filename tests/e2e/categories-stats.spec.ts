@@ -31,11 +31,22 @@ async function addExpense(page: Page, amount: string, categoryLabel: string, dat
   await page.getByRole('button', { name: '送出' }).click()
 }
 
+/** Phase 8 起「分類管理」入口移進了設定頁（見 Settings.tsx 的「分類管理」列）。 */
+async function goToCategories(page: Page) {
+  await page.getByTestId('settings-link').click()
+  await page.getByTestId('categories-entry').click()
+}
+
+/** Phase 8 起沒有全域「記帳本」連結了，回首頁一律走底部分頁列。 */
+async function goHome(page: Page) {
+  await page.getByRole('link', { name: '首頁' }).click()
+}
+
 test('E2E-8 — 分類管理：新增分類、系統預設分類不可刪除', async ({ page }) => {
   page.on('dialog', (dialog) => dialog.accept())
   await createFirstWallet(page)
 
-  await page.getByRole('link', { name: '分類' }).click()
+  await goToCategories(page)
   await expect(page.getByRole('heading', { name: '分類管理' })).toBeVisible()
   await expect(page.getByTestId('category-item')).toHaveCount(11)
 
@@ -59,23 +70,23 @@ test('E2E-9 — 分類管理：刪除有交易的自訂分類時，交易轉移�
   page.on('dialog', (dialog) => dialog.accept())
   await createFirstWallet(page)
 
-  await page.getByRole('link', { name: '分類' }).click()
+  await goToCategories(page)
   await page.getByRole('link', { name: '＋ 新增分類' }).click()
   await page.getByLabel('分類名稱').fill('咖啡')
   await page.getByLabel('Icon（emoji）').fill('☕')
   await page.getByRole('button', { name: '建立分類' }).click()
 
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await addExpense(page, '100', '☕ 咖啡')
 
   const item = page.getByTestId('transaction-item').first()
   await expect(item).toContainText('☕ 咖啡')
 
-  await page.getByRole('link', { name: '分類' }).click()
+  await goToCategories(page)
   await page.getByTestId('category-item').filter({ hasText: '咖啡' }).getByTestId('delete-category').click()
   await expect(page.getByTestId('category-item')).toHaveCount(11)
 
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('transaction-item').first()).toContainText('未分類')
 })
 

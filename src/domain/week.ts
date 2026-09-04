@@ -46,6 +46,11 @@ export function shiftIsoDate(date: IsoDate, days: number): IsoDate {
   return utcMillisToIso(isoToUtcMillis(date) + days * MS_PER_DAY)
 }
 
+/** `to` 與 `from` 相差的曆日數（`to` 較晚為正），UTC 曆日運算。 */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return Math.round((isoToUtcMillis(to) - isoToUtcMillis(from)) / MS_PER_DAY)
+}
+
 export function weekRangeOf(date: IsoDate, weekStartDay: WeekStartDay): WeekRange {
   const millis = isoToUtcMillis(date)
   const dayOfWeek = new Date(millis).getUTCDay()

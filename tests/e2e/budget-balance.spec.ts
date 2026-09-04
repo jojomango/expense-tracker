@@ -28,6 +28,17 @@ async function addExpense(page: Page, amount: string, date?: string) {
   await page.getByRole('button', { name: '送出' }).click()
 }
 
+/** Phase 8 起「管理錢包」入口移進了錢包切換 sheet（點錢包名稱開啟）。 */
+async function goToWalletsManagement(page: Page) {
+  await page.getByTestId('current-wallet-name').click()
+  await page.getByRole('link', { name: '管理錢包…' }).click()
+}
+
+/** Phase 8 起沒有全域「記帳本」連結了，回首頁一律走底部分頁列。 */
+async function goHome(page: Page) {
+  await page.getByRole('link', { name: '首頁' }).click()
+}
+
 test('E2E-3 — 超支警示：紅色樣式、警示圖示與已超支標示', async ({ page }) => {
   await createFirstWallet(page)
   await addExpense(page, '2900')
@@ -47,7 +58,7 @@ test('E2E-4 — 多錢包與多幣別：餘額互不影響', async ({ page }) =>
   await addExpense(page, '500')
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$2,500.00')
 
-  await page.getByRole('link', { name: '管理錢包' }).click()
+  await goToWalletsManagement(page)
   await page.getByRole('link', { name: '＋ 新增錢包' }).click()
   await page.getByLabel('錢包名稱').fill('日本旅遊')
   await page.getByLabel('幣別').selectOption('JPY')
@@ -55,7 +66,7 @@ test('E2E-4 — 多錢包與多幣別：餘額互不影響', async ({ page }) =>
   await page.getByLabel('預算金額').fill('200000')
   await page.getByRole('button', { name: '建立錢包' }).click()
 
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('current-wallet-name')).toHaveText('日本旅遊')
   await expect(page.getByTestId('total-balance')).toHaveText('¥200,000')
   await expect(page.getByText('本錢包還沒有任何交易')).toBeVisible()
@@ -64,14 +75,14 @@ test('E2E-4 — 多錢包與多幣別：餘額互不影響', async ({ page }) =>
   await expect(page.getByTestId('total-balance')).toHaveText('¥192,000')
   await expect(page.getByText('已用 4%')).toBeVisible()
 
-  await page.getByRole('link', { name: '管理錢包' }).click()
+  await goToWalletsManagement(page)
   await page
     .locator('li')
     .filter({ hasText: '日常' })
     .getByTestId('switch-wallet')
     .click()
 
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('current-wallet-name')).toHaveText('日常')
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$2,500.00')
   await expect(page.getByText('跨幣別', { exact: false })).toHaveCount(0)
@@ -90,7 +101,7 @@ test('E2E-5 — 週起始日設定：變更即時重算週餘額與分組', asyn
   await expect(page.getByRole('heading', { name: '設定' })).toBeVisible()
   await page.getByLabel('週起始日').selectOption('0')
 
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$1,500.00')
 
   const headers = page.getByTestId('week-group-header')

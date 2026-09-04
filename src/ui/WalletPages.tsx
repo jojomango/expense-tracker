@@ -9,6 +9,7 @@ export function NewWalletPage() {
     <WalletForm
       heading="新增錢包"
       submitLabel="建立錢包"
+      backTo="/wallets"
       onSubmit={async (values) => {
         await createWallet(values)
         navigate('/wallets')
@@ -31,6 +32,7 @@ export function EditWalletPage() {
       submitLabel="儲存變更"
       initial={wallet}
       lockCurrency
+      backTo="/wallets"
       onSubmit={async (values) => {
         await updateWallet({ ...wallet, ...values, currency: wallet.currency })
         navigate('/wallets')
