@@ -9,6 +9,7 @@ export function NewCategoryPage() {
     <CategoryForm
       heading="新增分類"
       submitLabel="建立分類"
+      backTo="/categories"
       onSubmit={async (values) => {
         await addCategory(values)
         navigate('/categories')
@@ -31,6 +32,7 @@ export function EditCategoryPage() {
       submitLabel="儲存變更"
       initial={category}
       lockType
+      backTo="/categories"
       onSubmit={async (values) => {
         await updateCategory({ ...category, ...values, type: category.type })
         navigate('/categories')

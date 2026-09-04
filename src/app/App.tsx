@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { HashRouter, Link, Route, Routes } from 'react-router-dom'
+import { HashRouter, Route, Routes } from 'react-router-dom'
 import { useAppStore } from './store'
 import Home from '../ui/Home'
 import Wallets from '../ui/Wallets'
@@ -7,6 +7,8 @@ import Settings from '../ui/Settings'
 import Categories from '../ui/Categories'
 import Stats from '../ui/Stats'
 import ErrorBoundary from '../ui/ErrorBoundary'
+import BottomTabBar from '../ui/BottomTabBar'
+import ToastHost from '../ui/Toast'
 import { NewWalletPage, EditWalletPage } from '../ui/WalletPages'
 import { NewTransactionPage, EditTransactionPage } from '../ui/TransactionPages'
 import { NewCategoryPage, EditCategoryPage } from '../ui/CategoryPages'
@@ -48,38 +50,28 @@ export default function App() {
 
   return (
     <HashRouter>
-      <div className="min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-          <Link to="/">
-            <h1 className="text-lg font-semibold">記帳本</h1>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-            <Link to="/categories" className="underline">
-              分類
-            </Link>
-            <Link to="/stats" className="underline">
-              統計
-            </Link>
-            <Link to="/settings" className="underline">
-              設定
-            </Link>
-          </nav>
-        </header>
-        <ErrorBoundary>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/wallets" element={<Wallets />} />
-            <Route path="/wallets/new" element={<NewWalletPage />} />
-            <Route path="/wallets/:id/edit" element={<EditWalletPage />} />
-            <Route path="/transactions/new" element={<NewTransactionPage />} />
-            <Route path="/transactions/:id/edit" element={<EditTransactionPage />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/categories/new" element={<NewCategoryPage />} />
-            <Route path="/categories/:id/edit" element={<EditCategoryPage />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </ErrorBoundary>
+      <div className="min-h-dvh bg-bg font-sans text-fg">
+        {/* UI-SPEC.md §3.1：底部分頁列取代標題列連結，這裡不再有共用的 <header>。
+            pb-24 讓內容不被固定在底部的分頁列蓋住（分頁列高 84px，多留一點餘裕）。 */}
+        <div className="safe-top pb-24">
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/wallets" element={<Wallets />} />
+              <Route path="/wallets/new" element={<NewWalletPage />} />
+              <Route path="/wallets/:id/edit" element={<EditWalletPage />} />
+              <Route path="/transactions/new" element={<NewTransactionPage />} />
+              <Route path="/transactions/:id/edit" element={<EditTransactionPage />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/categories/new" element={<NewCategoryPage />} />
+              <Route path="/categories/:id/edit" element={<EditCategoryPage />} />
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </ErrorBoundary>
+        </div>
+        <BottomTabBar />
+        <ToastHost />
       </div>
     </HashRouter>
   )

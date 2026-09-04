@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../app/store'
 import { DefaultCategoryError, type Category } from '../domain/category'
+import BackLink from './BackLink'
 
 function CategoryGroup({
   title,
@@ -74,6 +75,7 @@ export default function Categories() {
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-4">
+      <BackLink to="/settings" />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">分類管理</h1>
         <Link

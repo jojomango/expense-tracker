@@ -6,6 +6,7 @@ import { parse } from '../domain/money'
 import { decimalsFor } from '../domain/currency'
 import { todayIso, toIsoDate, type IsoDate } from '../domain/iso-date'
 import type { Wallet } from '../domain/wallet'
+import BackLink from './BackLink'
 
 interface TransactionFormProps {
   wallet: Wallet
@@ -76,6 +77,7 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-sm space-y-4 p-6">
+      <BackLink to="/" label="取消" />
       <h1 className="text-xl font-semibold">{initial ? '編輯交易' : '新增交易'}</h1>
 
       <div className="flex gap-2">

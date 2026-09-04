@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppStore, selectCurrentWallet } from '../app/store'
 import { LastWalletError } from '../domain/wallet'
+import BackLink from './BackLink'
 
 export default function Wallets() {
   const navigate = useNavigate()
@@ -34,6 +35,7 @@ export default function Wallets() {
 
   return (
     <div className="mx-auto max-w-md space-y-4 p-4">
+      <BackLink to="/" />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">錢包管理</h1>
         <Link to="/wallets/new" className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">

@@ -21,11 +21,22 @@ async function createFirstWallet(
   await expect(page.getByTestId('current-wallet-name')).toHaveText(opts.name)
 }
 
+/** Phase 8 起沒有全域「記帳本」連結了，回首頁一律走底部分頁列。 */
+async function goHome(page: Page) {
+  await page.getByRole('link', { name: '首頁' }).click()
+}
+
+/** Phase 8 起「管理錢包」入口移進了錢包切換 sheet（點錢包名稱開啟）。 */
+async function goToWalletsManagement(page: Page) {
+  await page.getByTestId('current-wallet-name').click()
+  await page.getByRole('link', { name: '管理錢包…' }).click()
+}
+
 async function createWallet(
   page: Page,
   opts: { name: string; currency: string; budgetMode: string; budgetAmount: string },
 ) {
-  await page.getByRole('link', { name: '管理錢包' }).click()
+  await goToWalletsManagement(page)
   await page.getByRole('link', { name: '＋ 新增錢包' }).click()
   await page.getByLabel('錢包名稱').fill(opts.name)
   await page.getByLabel('幣別').selectOption(opts.currency)
@@ -34,7 +45,7 @@ async function createWallet(
     await page.getByLabel('預算金額').fill(opts.budgetAmount)
   }
   await page.getByRole('button', { name: '建立錢包' }).click()
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('current-wallet-name')).toHaveText(opts.name)
 }
 
@@ -46,10 +57,10 @@ async function addExpense(page: Page, amount: string) {
 }
 
 async function switchToWallet(page: Page, name: string) {
-  await page.getByRole('link', { name: '記帳本' }).click()
-  await page.getByRole('link', { name: '管理錢包' }).click()
+  await goHome(page)
+  await goToWalletsManagement(page)
   await page.locator('li').filter({ hasText: name }).getByTestId('switch-wallet').click()
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('current-wallet-name')).toHaveText(name)
 }
 
@@ -103,13 +114,13 @@ test('E2E-6 — 備份與還原：匯出後在全新裝置匯入，資料與設�
   await expect(freshPage.getByLabel('週起始日')).toHaveValue('0')
 
   // 錢包與交易還原：兩個錢包、餘額與匯出前完全一致。
-  await freshPage.getByRole('link', { name: '記帳本' }).click()
+  await goHome(freshPage)
   await expect(freshPage.getByTestId('current-wallet-name')).toHaveText('日常')
   await expect(freshPage.getByTestId('weekly-balance')).toHaveText('NT$2,200.00')
 
-  await freshPage.getByRole('link', { name: '管理錢包' }).click()
+  await goToWalletsManagement(freshPage)
   await freshPage.locator('li').filter({ hasText: '日本旅遊' }).getByTestId('switch-wallet').click()
-  await freshPage.getByRole('link', { name: '記帳本' }).click()
+  await goHome(freshPage)
   await expect(freshPage.getByTestId('current-wallet-name')).toHaveText('日本旅遊')
   await expect(freshPage.getByTestId('total-balance')).toHaveText('¥192,000')
 
@@ -138,7 +149,7 @@ test('E2E-6 — 匯入 replace 時不輸入確認字串會被拒絕，現有資�
   await page.getByTestId('import-backup-button').click()
   await expect(page.getByTestId('import-error')).toBeVisible()
 
-  await page.getByRole('link', { name: '記帳本' }).click()
+  await goHome(page)
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$2,500.00')
 })
 
@@ -164,7 +175,7 @@ test('E2E-7 — 離線與 PWA：飛航模式下既有資料可讀取，也能正
   await context.setOffline(true)
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: '記帳本' })).toBeVisible()
+  await expect(page.getByTestId('bottom-tab-bar')).toBeVisible()
   await expect(page.getByTestId('current-wallet-name')).toHaveText('日常')
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$2,880.00')
   await expect(page.getByText('NT$120.00')).toBeVisible()

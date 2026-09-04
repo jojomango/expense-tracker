@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { Category, CategoryType } from '../domain/category'
+import BackLink from './BackLink'
 
 export interface CategoryFormValues {
   name: string
@@ -13,6 +14,7 @@ interface CategoryFormProps {
   initial?: Category
   /** 編輯既有分類時鎖住類型欄位，避免既有交易的分類篩選邏輯錯亂。 */
   lockType?: boolean
+  backTo?: string
   onSubmit: (values: CategoryFormValues) => Promise<void>
 }
 
@@ -21,6 +23,7 @@ export default function CategoryForm({
   submitLabel,
   initial,
   lockType = false,
+  backTo,
   onSubmit,
 }: CategoryFormProps) {
   const [name, setName] = useState(initial?.name ?? '')
@@ -44,6 +47,7 @@ export default function CategoryForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-sm space-y-4 p-6">
+      {backTo && <BackLink to={backTo} />}
       <h1 className="text-xl font-semibold">{heading}</h1>
 
       <div>

@@ -1,9 +1,11 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAppStore } from '../app/store'
 import type { WeekStartDay } from '../domain/week'
 import type { Theme } from '../domain/settings'
 import { shouldRemindBackup } from '../domain/backup-reminder'
 import { BackupError } from '../domain/backup'
+import BackLink from './BackLink'
 
 const WEEK_START_LABELS: Record<WeekStartDay, string> = {
   0: '週日',
@@ -215,9 +217,25 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-sm space-y-6 p-6">
-      <h1 className="text-xl font-semibold">設定</h1>
+      <div>
+        <BackLink to="/" />
+        <h1 className="text-xl font-semibold">設定</h1>
+      </div>
 
       <BackupReminderBanner onBackupNow={() => document.getElementById('export-anchor')?.scrollIntoView()} />
+
+      <div>
+        <Link
+          to="/categories"
+          data-testid="categories-entry"
+          className="flex items-center justify-between rounded border border-slate-300 px-3 py-2 dark:border-slate-600"
+        >
+          <span>分類管理</span>
+          <span aria-hidden="true" className="text-fg2">
+            ›
+          </span>
+        </Link>
+      </div>
 
       <div>
         <label htmlFor="week-start-day" className="block text-sm font-medium">

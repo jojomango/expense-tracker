@@ -1,3 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * UI-SPEC.md §2.1 — 設計 token 的實際色值。用 CSS 變數而不是把 hex 寫進
+ * tailwind.config.js 的固定色盤，因為同一個 token（例如 accent）在深淺色
+ * 下是不同的色值，CSS 變數 + `.dark` class 是唯一能讓 Tailwind utility
+ * class（例如 `bg-accent`）自動跟著切換、不必在每個元件寫條件式的作法。
+ */
+:root {
+  --color-bg: #f2f1ef;
+  --color-card: #ffffff;
+  --color-fg: #111114;
+  --color-fg2: #6b6b70;
+  --color-fg3: #a3a3a8;
+  --color-sep: #e6e3df;
+  --color-track: #ece9e6;
+  --color-barbg: rgba(242, 241, 239, 0.86);
+  --color-sheet: rgba(255, 255, 255, 0.96);
+  --color-keypad: #e2dfda;
+  --color-key: #ffffff;
+  --color-accent: #c1502e;
+  --color-danger: #d9463b;
+  --color-income: #2f8f63;
+}
+
+/* dark 的 accent 比 light 亮一階，因為 #c1502e 在純黑上對比不足（UI-SPEC.md §2.1）。 */
+.dark {
+  --color-bg: #000000;
+  --color-card: #1c1c1e;
+  --color-fg: #ffffff;
+  --color-fg2: #98989f;
+  --color-fg3: #6c6c72;
+  --color-sep: #2c2c2e;
+  --color-track: #2c2c2e;
+  --color-barbg: rgba(10, 10, 12, 0.8);
+  --color-sheet: rgba(44, 44, 46, 0.96);
+  --color-keypad: #151517;
+  --color-key: #3a3a3c;
+  --color-accent: #d9673f;
+  --color-danger: #e8564a;
+  --color-income: #3fa878;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  font-family: theme('fontFamily.sans');
+}
+
+/* 狀態列 / 分頁列吃掉瀏海與 Home Indicator 的安全區（UI-SPEC.md §2.4）。 */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

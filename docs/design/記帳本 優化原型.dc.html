@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body { margin: 0; background: #eceae7; font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, "PingFang TC", sans-serif; }
+  a { color: #c1502e; }
+  a:hover { color: #9c3f24; }
+  * { -webkit-tap-highlight-color: transparent; }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 48px 24px 80px; color: #1a1a1a">
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 16px">
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em">記帳本 · 改版原型</h1>
+    <p style="margin: 0; max-width: 54ch; text-align: center; font-size: 15px; color: #55504a; line-height: 1.6">可以直接操作:點中央按鈕記一筆、點錢包名稱切換、左滑交易列刪除。切到「現況」看同一個畫面現在的樣子。</p>
+    <div style="display: flex; gap: 10px">
+      <div style="display: flex; padding: 3px; border-radius: 10px; background: #ddd9d4">
+        <button type="button" onClick="{{ showNew }}" style="border: 0; cursor: pointer; border-radius: 8px; padding: 7px 16px; font-size: 14px; font-family: inherit; background: {{ newTabBg }}; color: {{ newTabFg }}; box-shadow: {{ newTabShadow }}">改版</button>
+        <button type="button" onClick="{{ showOld }}" style="border: 0; cursor: pointer; border-radius: 8px; padding: 7px 16px; font-size: 14px; font-family: inherit; background: {{ oldTabBg }}; color: {{ oldTabFg }}; box-shadow: {{ oldTabShadow }}">現況</button>
+      </div>
+      <div style="display: flex; padding: 3px; border-radius: 10px; background: #ddd9d4">
+        <button type="button" onClick="{{ setLight }}" style="border: 0; cursor: pointer; border-radius: 8px; padding: 7px 16px; font-size: 14px; font-family: inherit; background: {{ lightTabBg }}; color: {{ lightTabFg }}; box-shadow: {{ lightTabShadow }}">淺色</button>
+        <button type="button" onClick="{{ setDark }}" style="border: 0; cursor: pointer; border-radius: 8px; padding: 7px 16px; font-size: 14px; font-family: inherit; background: {{ darkTabBg }}; color: {{ darkTabFg }}; box-shadow: {{ darkTabShadow }}">深色</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: relative; width: 390px; height: 844px; border-radius: 46px; padding: 0; background: #101012; box-shadow: 0 24px 60px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.3)">
+    <div style="{{ themeStyle }}">
+      <div style="position: absolute; inset: 8px; overflow: hidden; border-radius: 38px; background: var(--bg, #f2f1ef); color: var(--fg, #111114)">
+
+        <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: flex-end; justify-content: space-between; height: 52px; padding: 0 26px 6px; font-size: 14px; font-weight: 600; color: var(--fg, #111114); background: var(--barbg, rgba(242,241,239,0.86)); backdrop-filter: saturate(180%) blur(16px)">
+          <span>9:41</span>
+          <span style="display: flex; align-items: center; gap: 5px">
+            <span style="display: inline-block; width: 15px; height: 10px; border-radius: 2px; background: currentColor; opacity: 0.85"></span>
+            <span style="display: inline-block; width: 22px; height: 11px; border-radius: 3px; border: 1px solid currentColor; opacity: 0.7"></span>
+          </span>
+        </div>
+
+        <sc-if value="{{ isNew }}" hint-placeholder-val="{{ true }}">
+          <div style="position: absolute; inset: 0">
+
+            <sc-if value="{{ atHome }}" hint-placeholder-val="{{ true }}">
+              <div style="position: absolute; top: 52px; bottom: 0; left: 0; right: 0; overflow-y: auto">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 20px 2px">
+                  <button type="button" onClick="{{ openWallets }}" style="display: flex; align-items: center; gap: 6px; border: 0; background: none; cursor: pointer; padding: 6px 0; font-family: inherit; color: var(--fg, #111114)">
+                    <span style="font-size: 17px; font-weight: 600">{{ walletName }}</span>
+                    <span style="font-size: 11px; color: var(--fg2, #6b6b70)">▾</span>
+                  </button>
+                  <button type="button" onClick="{{ goStats }}" style="border: 0; background: none; cursor: pointer; font-family: inherit; font-size: 15px; color: var(--accent, #c1502e)">本週</button>
+                </div>
+
+                <div style="padding: 10px 20px 0">
+                  <div style="border-radius: 20px; background: var(--card, #ffffff); padding: 22px 22px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+                    <p style="margin: 0; font-size: 13px; font-weight: 500; letter-spacing: 0.02em; color: var(--fg2, #6b6b70)">本週還可以花</p>
+                    <p style="margin: 4px 0 0; font-size: 46px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.05">{{ remainingText }}</p>
+                    <div style="margin-top: 18px; height: 8px; border-radius: 4px; background: var(--track, #ece9e6); overflow: hidden">
+                      <div style="height: 8px; border-radius: 4px; background: var(--accent, #c1502e); width: {{ usedPercentWidth }}"></div>
+                    </div>
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--fg2, #6b6b70)">
+                      <span>已用 {{ usedText }} / {{ budgetText }}</span>
+                      <span>還有 {{ daysLeft }} 天</span>
+                    </div>
+                    <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sep, #ece9e6); display: flex; align-items: baseline; justify-content: space-between; font-size: 13px; color: var(--fg2, #6b6b70)">
+                      <span>日均可用</span>
+                      <span style="font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--fg, #111114)">{{ perDayText }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="padding: 26px 20px 120px; display: flex; flex-direction: column; gap: 22px">
+                  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+                    <div>
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 8px">
+                        <span style="font-size: 13px; font-weight: 600; color: var(--fg2, #6b6b70)">{{ g.label }}</span>
+                        <span style="font-size: 13px; font-variant-numeric: tabular-nums; color: var(--fg3, #a3a3a8)">{{ g.total }}</span>
+                      </div>
+                      <div style="border-radius: 16px; background: var(--card, #ffffff); box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+                        <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="3">
+                          <div style="position: relative; overflow: hidden; border-radius: {{ t.radius }}">
+                            <button type="button" onClick="{{ t.remove }}" style="position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; cursor: pointer; background: #d9463b; color: #fff; font-family: inherit; font-size: 15px">刪除</button>
+                            <div onPointerDown="{{ t.down }}" onPointerMove="{{ t.move }}" onPointerUp="{{ t.up }}" onClick="{{ t.open }}" style="position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 14px; min-height: 44px; background: var(--card, #ffffff); cursor: pointer; transform: {{ t.transform }}; transition: {{ t.transition }}; touch-action: pan-y">
+                              <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; font-size: 19px; background: {{ t.tint }}">{{ t.icon }}</span>
+                              <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                                <span style="font-size: 16px; font-weight: 500">{{ t.category }}</span>
+                                <span style="font-size: 13px; color: var(--fg2, #6b6b70); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ t.sub }}</span>
+                              </span>
+                              <span style="font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; color: {{ t.amountColor }}">{{ t.amount }}</span>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ atStats }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 52px; bottom: 0; left: 0; right: 0; overflow-y: auto">
+                <div style="padding: 8px 20px 0">
+                  <p style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em">統計</p>
+                </div>
+                <div style="padding: 16px 20px 0">
+                  <div style="display: flex; padding: 2px; border-radius: 10px; background: var(--track, #ece9e6)">
+                    <button type="button" onClick="{{ setWeek }}" style="flex: 1; border: 0; cursor: pointer; border-radius: 8px; padding: 7px 0; font-family: inherit; font-size: 14px; background: {{ weekBg }}; color: {{ weekFg }}; box-shadow: {{ weekShadow }}">本週</button>
+                    <button type="button" onClick="{{ setMonth }}" style="flex: 1; border: 0; cursor: pointer; border-radius: 8px; padding: 7px 0; font-family: inherit; font-size: 14px; background: {{ monthBg }}; color: {{ monthFg }}; box-shadow: {{ monthShadow }}">本月</button>
+                  </div>
+                </div>
+
+                <div style="padding: 20px 20px 0">
+                  <div style="border-radius: 20px; background: var(--card, #ffffff); padding: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+                    <div style="position: relative; display: flex; align-items: center; justify-content: center; height: 190px">
+                      <svg viewBox="0 0 100 100" style="width: 190px; height: 190px; transform: rotate(-90deg)">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--track, #ece9e6)" stroke-width="11"></circle>
+                        <sc-for list="{{ donut }}" as="d" hint-placeholder-count="4">
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="{{ d.color }}" stroke-width="11" stroke-linecap="butt" stroke-dasharray="{{ d.dash }}" stroke-dashoffset="{{ d.offset }}"></circle>
+                        </sc-for>
+                      </svg>
+                      <div style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px">
+                        <span style="font-size: 12px; color: var(--fg2, #6b6b70)">{{ rangeLabel }}支出</span>
+                        <span style="font-size: 27px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">{{ rangeTotal }}</span>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 18px">
+                      <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+                        <div style="display: flex; flex-direction: column; gap: 6px">
+                          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 14px">
+                            <span style="display: flex; align-items: center; gap: 8px; min-width: 0">
+                              <span style="flex: none; width: 10px; height: 10px; border-radius: 3px; background: {{ l.color }}"></span>
+                              <span style="white-space: nowrap">{{ l.name }}</span>
+                            </span>
+                            <span style="flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--fg2, #6b6b70)">{{ l.amount }} · {{ l.percent }}</span>
+                          </div>
+                          <div style="height: 4px; border-radius: 2px; background: var(--track, #ece9e6)">
+                            <div style="height: 4px; border-radius: 2px; background: {{ l.color }}; width: {{ l.width }}"></div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="padding: 20px 20px 130px">
+                  <div style="border-radius: 20px; background: var(--card, #ffffff); padding: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+                    <div style="display: flex; align-items: baseline; justify-content: space-between">
+                      <span style="font-size: 15px; font-weight: 600">近 8 週支出</span>
+                      <span style="font-size: 13px; color: var(--fg2, #6b6b70)">{{ trendCompare }}</span>
+                    </div>
+                    <p style="margin: 6px 0 0; font-size: 12px; color: var(--fg3, #a3a3a8)">每週平均 {{ avgText }}</p>
+                    <svg viewBox="0 0 320 100" style="width: 100%; margin-top: 10px; display: block">
+                      <line x1="0" y1="{{ avgY }}" x2="320" y2="{{ avgY }}" stroke-width="1" stroke-dasharray="3 4" style="stroke: var(--fg3, #a3a3a8)"></line>
+                      <sc-for list="{{ trend }}" as="b" hint-placeholder-count="8">
+                        <rect x="{{ b.x }}" y="{{ b.y }}" width="26" height="{{ b.h }}" rx="5" fill="{{ b.fill }}"></rect>
+                      </sc-for>
+                    </svg>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); margin-top: 6px">
+                      <sc-for list="{{ trend }}" as="b" hint-placeholder-count="8">
+                        <span style="text-align: center; font-size: 10px; white-space: nowrap; color: {{ b.labelFill }}">{{ b.label }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ atAdd }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; background: var(--bg, #f2f1ef)">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 58px 18px 6px">
+                  <button type="button" onClick="{{ cancel }}" style="border: 0; background: none; cursor: pointer; font-family: inherit; font-size: 16px; color: var(--fg2, #6b6b70)">取消</button>
+                  <div style="display: flex; padding: 2px; border-radius: 9px; background: var(--track, #ece9e6)">
+                    <button type="button" onClick="{{ setExpense }}" style="border: 0; cursor: pointer; border-radius: 7px; padding: 6px 18px; font-family: inherit; font-size: 14px; background: {{ expenseBg }}; color: {{ expenseFg }}; box-shadow: {{ expenseShadow }}">支出</button>
+                    <button type="button" onClick="{{ setIncome }}" style="border: 0; cursor: pointer; border-radius: 7px; padding: 6px 18px; font-family: inherit; font-size: 14px; background: {{ incomeBg }}; color: {{ incomeFg }}; box-shadow: {{ incomeShadow }}">收入</button>
+                  </div>
+                  <span style="width: 32px"></span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 26px 20px 20px">
+                  <span style="font-size: 12px; letter-spacing: 0.04em; color: var(--fg2, #6b6b70)">{{ walletName }} · {{ walletCode }}</span>
+                  <span style="font-size: 54px; font-weight: 600; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; color: {{ amountColorLive }}">{{ amountDisplay }}</span>
+                </div>
+
+                <div style="padding: 0 16px">
+                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px">
+                    <sc-for list="{{ cats }}" as="c" hint-placeholder-count="8">
+                      <button type="button" onClick="{{ c.pick }}" style="display: flex; flex-direction: column; align-items: center; gap: 5px; border: 0; background: none; cursor: pointer; padding: 4px 0; font-family: inherit">
+                        <span style="display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 16px; font-size: 22px; background: {{ c.tint }}; box-shadow: {{ c.ring }}">{{ c.icon }}</span>
+                        <span style="font-size: 11px; color: {{ c.labelColor }}">{{ c.name }}</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; padding: 18px 20px 0">
+                  <button type="button" onClick="{{ setToday }}" style="border: 0; cursor: pointer; border-radius: 999px; padding: 7px 15px; font-family: inherit; font-size: 13px; background: {{ todayBg }}; color: {{ todayFg }}">今天</button>
+                  <button type="button" onClick="{{ setYesterday }}" style="border: 0; cursor: pointer; border-radius: 999px; padding: 7px 15px; font-family: inherit; font-size: 13px; background: {{ ydayBg }}; color: {{ ydayFg }}">昨天</button>
+                  <button type="button" onClick="{{ setPick }}" style="border: 0; cursor: pointer; border-radius: 999px; padding: 7px 15px; font-family: inherit; font-size: 13px; background: {{ pickBg }}; color: {{ pickFg }}">選日期</button>
+                  <span style="flex: 1"></span>
+                  <button type="button" style="border: 0; cursor: pointer; border-radius: 999px; padding: 7px 15px; font-family: inherit; font-size: 13px; background: var(--track, #ece9e6); color: var(--fg2, #6b6b70)">＋ 備註</button>
+                </div>
+
+                <span style="flex: 1"></span>
+
+                <div style="padding: 14px 8px 12px; background: var(--keypad, #e6e3df)">
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px">
+                    <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+                      <button type="button" onClick="{{ k.tap }}" style="border: 0; cursor: pointer; border-radius: 12px; padding: 13px 0; font-family: inherit; font-size: 25px; font-weight: 400; background: var(--key, #ffffff); color: var(--fg, #111114); box-shadow: 0 1px 1px rgba(0,0,0,0.12)">{{ k.label }}</button>
+                    </sc-for>
+                  </div>
+                  <button type="button" onClick="{{ submit }}" style="width: 100%; margin-top: 8px; border: 0; cursor: pointer; border-radius: 14px; padding: 15px 0; font-family: inherit; font-size: 17px; font-weight: 600; background: var(--accent, #c1502e); color: #fff; opacity: {{ submitOpacity }}">記一筆</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+              <div style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 4; display: flex; align-items: flex-start; justify-content: space-around; height: 84px; padding-top: 10px; border-top: 1px solid var(--sep, #e3e1de); background: var(--barbg, rgba(242,241,239,0.86)); backdrop-filter: saturate(180%) blur(16px)">
+                <button type="button" onClick="{{ goHome }}" style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 76px; border: 0; background: none; cursor: pointer; font-family: inherit; color: {{ homeTabColor }}">
+                  <span style="width: 20px; height: 20px; border-radius: 5px; border: 2px solid currentColor"></span>
+                  <span style="font-size: 10px">首頁</span>
+                </button>
+                <button type="button" onClick="{{ goAdd }}" style="display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; margin-top: -20px; border: 0; cursor: pointer; border-radius: 50%; background: var(--accent, #c1502e); color: #fff; font-family: inherit; font-size: 30px; font-weight: 300; line-height: 1; box-shadow: 0 6px 18px rgba(193,80,46,0.4)">＋</button>
+                <button type="button" onClick="{{ goStats }}" style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 76px; border: 0; background: none; cursor: pointer; font-family: inherit; color: {{ statsTabColor }}">
+                  <span style="display: flex; align-items: flex-end; gap: 2px; height: 20px">
+                    <span style="width: 4px; height: 10px; border-radius: 1px; background: currentColor"></span>
+                    <span style="width: 4px; height: 18px; border-radius: 1px; background: currentColor"></span>
+                    <span style="width: 4px; height: 14px; border-radius: 1px; background: currentColor"></span>
+                  </span>
+                  <span style="font-size: 10px">統計</span>
+                </button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ walletSheet }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ closeWallets }}" style="position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; background: rgba(0,0,0,0.35)">
+                <div style="overflow: hidden; border-radius: 18px; background: var(--sheet, rgba(255,255,255,0.96)); backdrop-filter: blur(20px)">
+                  <p style="margin: 0; padding: 14px 20px; text-align: center; font-size: 13px; color: var(--fg2, #6b6b70); border-bottom: 1px solid var(--sep, #e3e1de)">切換錢包</p>
+                  <sc-for list="{{ walletList }}" as="w" hint-placeholder-count="3">
+                    <button type="button" onClick="{{ w.pick }}" style="display: flex; align-items: center; gap: 12px; width: 100%; border: 0; border-bottom: 1px solid var(--sep, #e3e1de); cursor: pointer; background: none; padding: 15px 20px; font-family: inherit; text-align: left; color: var(--fg, #111114)">
+                      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+                        <span style="font-size: 17px">{{ w.name }}</span>
+                        <span style="font-size: 13px; color: var(--fg2, #6b6b70)">{{ w.sub }}</span>
+                      </span>
+                      <span style="font-size: 17px; color: var(--accent, #c1502e); opacity: {{ w.checkOpacity }}">✓</span>
+                    </button>
+                  </sc-for>
+                  <button type="button" style="width: 100%; border: 0; cursor: pointer; background: none; padding: 15px 20px; font-family: inherit; font-size: 17px; color: var(--accent, #c1502e)">管理錢包…</button>
+                </div>
+                <button type="button" onClick="{{ closeWallets }}" style="margin-top: 8px; border: 0; cursor: pointer; border-radius: 18px; background: var(--sheet, rgba(255,255,255,0.96)); padding: 16px 0; font-family: inherit; font-size: 17px; font-weight: 600; color: var(--fg, #111114)">取消</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; bottom: 104px; left: 20px; right: 20px; z-index: 9; display: flex; align-items: center; gap: 10px; border-radius: 14px; background: rgba(20,20,22,0.92); padding: 13px 16px; color: #fff; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.25)">
+                <span style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent, #c1502e); font-size: 12px">✓</span>
+                <span style="flex: 1">{{ toast }}</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isOld }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; top: 52px; bottom: 0; left: 0; right: 0; overflow-y: auto; background: #f8fafc; color: #0f172a">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e8f0">
+              <span style="font-size: 18px; font-weight: 500">記帳本</span>
+              <span style="display: flex; align-items: center; gap: 16px; font-size: 14px; color: #64748b">
+                <span style="text-decoration: underline">分類</span>
+                <button type="button" onClick="{{ oldStats }}" style="border: 0; background: none; cursor: pointer; padding: 0; font-family: inherit; font-size: 14px; color: #64748b; text-decoration: underline">統計</button>
+                <span style="text-decoration: underline">設定</span>
+              </span>
+            </div>
+
+            <sc-if value="{{ oldAtHome }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 16px; padding: 16px">
+                <div style="display: flex; align-items: center; justify-content: space-between">
+                  <span style="font-size: 18px; font-weight: 500">主錢包</span>
+                  <span style="font-size: 14px; color: #64748b; text-decoration: underline">管理錢包</span>
+                </div>
+                <div style="border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+                  <p style="margin: 0; font-size: 14px; color: #64748b">本週餘額</p>
+                  <p style="margin: 0; font-size: 24px; font-weight: 500">NT$1,146</p>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between">
+                  <span style="font-size: 14px; font-weight: 500; color: #64748b">交易紀錄</span>
+                  <button type="button" onClick="{{ oldAdd }}" style="border: 0; cursor: pointer; border-radius: 4px; background: #0f172a; color: #fff; padding: 6px 12px; font-family: inherit; font-size: 14px">＋ 新增</button>
+                </div>
+                <div>
+                  <p style="margin: 0 0 4px; padding: 0 4px; font-size: 12px; font-weight: 500; color: #94a3b8">2026-08-31 ~ 2026-09-06</p>
+                  <div style="overflow: hidden; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+                    <sc-for list="{{ oldRows }}" as="t" hint-placeholder-count="5">
+                      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e2e8f0">
+                        <div>
+                          <p style="margin: 0; font-size: 14px; color: #64748b">{{ t.date }}</p>
+                          <p style="margin: 0; font-size: 16px">{{ t.label }}</p>
+                          <p style="margin: 0; font-size: 12px; color: #94a3b8">{{ t.note }}</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; font-size: 14px">
+                          <span style="font-size: 16px">{{ t.amount }}</span>
+                          <span style="color: #64748b; text-decoration: underline">編輯</span>
+                          <span style="color: #dc2626; text-decoration: underline">刪除</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ oldAtAdd }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 16px; padding: 24px">
+                <p style="margin: 0; font-size: 20px; font-weight: 500">新增交易</p>
+                <div style="display: flex; gap: 8px">
+                  <span style="flex: 1; text-align: center; border-radius: 4px; background: #0f172a; color: #fff; padding: 8px 12px; font-size: 16px">支出</span>
+                  <span style="flex: 1; text-align: center; border-radius: 4px; background: #f1f5f9; padding: 8px 12px; font-size: 16px">收入</span>
+                </div>
+                <div>
+                  <p style="margin: 0; font-size: 14px; font-weight: 500">金額</p>
+                  <div style="margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px">180</div>
+                </div>
+                <div>
+                  <p style="margin: 0; font-size: 14px; font-weight: 500">分類</p>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px">
+                    <span>🍜 餐飲</span>
+                    <span style="color: #64748b">▾</span>
+                  </div>
+                </div>
+                <div>
+                  <p style="margin: 0; font-size: 14px; font-weight: 500">日期</p>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px">
+                    <span>2026/09/03</span>
+                    <span style="color: #64748b">📅</span>
+                  </div>
+                </div>
+                <div>
+                  <p style="margin: 0; font-size: 14px; font-weight: 500">備註</p>
+                  <div style="margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px; color: #94a3b8">午餐 便當</div>
+                </div>
+                <button type="button" onClick="{{ oldHome }}" style="border: 0; cursor: pointer; border-radius: 4px; background: #0f172a; color: #fff; padding: 8px 16px; font-family: inherit; font-size: 16px">送出</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ oldAtStats }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 24px; padding: 16px">
+                <div style="display: flex; align-items: center; justify-content: space-between">
+                  <p style="margin: 0; font-size: 20px; font-weight: 500">統計</p>
+                  <button type="button" onClick="{{ oldHome }}" style="border: 0; background: none; cursor: pointer; font-family: inherit; font-size: 14px; color: #64748b; text-decoration: underline">回首頁</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+                  <div style="display: flex; align-items: center; justify-content: space-between">
+                    <span style="font-size: 14px; font-weight: 500; color: #64748b">分類支出佔比</span>
+                    <span style="display: flex; gap: 4px; font-size: 12px">
+                      <span style="border-radius: 4px; background: #0f172a; color: #fff; padding: 4px 8px">本週</span>
+                      <span style="border-radius: 4px; background: #f1f5f9; padding: 4px 8px">本月</span>
+                    </span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 16px">
+                    <svg viewBox="0 0 100 100" style="width: 150px; height: 150px; transform: rotate(-90deg)">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#0f172a" stroke-width="18" stroke-dasharray="88 163" stroke-dashoffset="0"></circle>
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#2563eb" stroke-width="18" stroke-dasharray="73 178" stroke-dashoffset="-88"></circle>
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#059669" stroke-width="18" stroke-dasharray="53 198" stroke-dashoffset="-161"></circle>
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#d97706" stroke-width="18" stroke-dasharray="37 214" stroke-dashoffset="-214"></circle>
+                    </svg>
+                    <div style="display: flex; flex-direction: column; gap: 4px; width: 100%; font-size: 14px">
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #0f172a"></span>🎬 娛樂</span>
+                        <span style="color: #64748b">NT$320(35%)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #2563eb"></span>🛒 日用</span>
+                        <span style="color: #64748b">NT$249(29%)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #059669"></span>🍜 餐飲</span>
+                        <span style="color: #64748b">NT$240(21%)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #d97706"></span>🚌 交通</span>
+                        <span style="color: #64748b">NT$45(15%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+                  <span style="font-size: 14px; font-weight: 500; color: #64748b">近 8 週支出趨勢</span>
+                  <svg viewBox="0 0 320 110" style="width: 100%">
+                    <rect x="6" y="42" width="28" height="58" fill="#2563eb"></rect>
+                    <rect x="46" y="18" width="28" height="82" fill="#2563eb"></rect>
+                    <rect x="86" y="61" width="28" height="39" fill="#2563eb"></rect>
+                    <rect x="126" y="30" width="28" height="70" fill="#2563eb"></rect>
+                    <rect x="166" y="72" width="28" height="28" fill="#2563eb"></rect>
+                    <rect x="206" y="8" width="28" height="92" fill="#2563eb"></rect>
+                    <rect x="246" y="55" width="28" height="45" fill="#2563eb"></rect>
+                    <rect x="286" y="36" width="28" height="64" fill="#2563eb"></rect>
+                  </svg>
+                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 12px; color: #64748b">
+                    <span>07-13<br />NT$2,100</span>
+                    <span>07-20<br />NT$2,980</span>
+                    <span>07-27<br />NT$1,410</span>
+                    <span>08-03<br />NT$2,540</span>
+                    <span>08-10<br />NT$1,020</span>
+                    <span>08-17<br />NT$1,660</span>
+                    <span>08-24<br />NT$1,630</span>
+                    <span>08-31<br />NT$854</span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width: 640px; display: flex; flex-direction: column; gap: 14px; padding-top: 8px">
+    <h2 style="margin: 0; font-size: 17px; font-weight: 600">這一版改了什麼</h2>
+    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #55504a; line-height: 1.6">
+      <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">導覽下移。</span>右上角三個底線連結換成底部分頁列,中央一顆記帳主鍵 —— 最高頻的動作變成最好按的元素。</p>
+      <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">錢包名稱可點。</span>直接在首頁切換,並看到每個錢包的餘額,不必再進管理頁。</p>
+      <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">預算卡有脈絡。</span>大字餘額 + 進度條 + 已用比例 + 剩餘天數 + 日均可用,用的都是 domain 層已經算好的數字。</p>
+      <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">列表瘦身。</span>編輯/刪除文字鍵移除,改為點列進編輯、左滑刪除;分類色塊承載 emoji,週分組標題改人話並顯示小計。</p>
+      <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">記帳頁重排。</span>金額大字置頂並即時千分位,分類攤成圖示網格,日期給今天/昨天快捷,自製數字鍵台省掉系統鍵盤的彈出與遮擋。</p>
+      <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">圖表補脈絡。</span>圓環中心放期間總額,分類色固定不再隨排序變動,趨勢圖加平均虛線、標籤對齊柱子、本週用強調色標出。</p>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:720,&quot;height&quot;:1180},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;外觀&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#c1502e&quot;,&quot;#2f5bd0&quot;,&quot;#1f6f5c&quot;,&quot;#5b4bc4&quot;],&quot;default&quot;:&quot;#c1502e&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;外觀&quot;}}">
+const CATS = [
+  { id: 'food', icon: '🍜', name: '餐飲', color: '#c1502e' },
+  { id: 'daily', icon: '🛒', name: '日用', color: '#2f6f9f' },
+  { id: 'transit', icon: '🚌', name: '交通', color: '#3f8f6a' },
+  { id: 'fun', icon: '🎬', name: '娛樂', color: '#8a5fbf' },
+  { id: 'health', icon: '💊', name: '醫療', color: '#c04a6e' },
+  { id: 'home', icon: '🏠', name: '居家', color: '#a8792f' },
+  { id: 'edu', icon: '📚', name: '學習', color: '#4a6fa8' },
+  { id: 'other', icon: '📦', name: '其他', color: '#7a7a80' },
+]
+
+const TREND = [
+  { label: '7/13', amount: 2100 },
+  { label: '7/20', amount: 2980 },
+  { label: '7/27', amount: 1410 },
+  { label: '8/03', amount: 2540 },
+  { label: '8/10', amount: 1020 },
+  { label: '8/17', amount: 1660 },
+  { label: '8/24', amount: 1630 },
+]
+
+const WALLETS = [
+  { id: 'main', name: '主錢包', sym: 'NT$', code: 'TWD', budget: 2000 },
+  { id: 'cash', name: '現金', sym: 'NT$', code: 'TWD', budget: 1200 },
+  { id: 'jpy', name: '日本旅費', sym: '¥', code: 'JPY', budget: 60000 },
+]
+
+function nt(n, sym) {
+  return (sym ?? 'NT$') + Math.round(n).toLocaleString('en-US')
+}
+
+class Component extends DCLogic {
+  state = {
+    version: 'new',
+    theme: null,
+    screen: 'home',
+    range: 'week',
+    type: 'expense',
+    amount: '',
+    catId: 'food',
+    dateKey: 'today',
+    walletSheet: false,
+    toast: null,
+    openId: null,
+    dragX: 0,
+    dragId: null,
+    walletId: 'main',
+    txs: [
+      { id: 't1', walletId: 'main', catId: 'daily', amount: 249, note: '洗髮精', date: '9/3', week: 0 },
+      { id: 't2', walletId: 'main', catId: 'food', amount: 180, note: '午餐 便當', date: '9/3', week: 0 },
+      { id: 't3', walletId: 'main', catId: 'transit', amount: 45, note: '捷運', date: '9/2', week: 0 },
+      { id: 't4', walletId: 'main', catId: 'food', amount: 60, note: '早餐', date: '9/2', week: 0 },
+      { id: 't5', walletId: 'main', catId: 'fun', amount: 320, note: '電影', date: '9/1', week: 0 },
+      { id: 't6', walletId: 'main', catId: 'food', amount: 420, note: '聚餐', date: '8/29', week: 1 },
+      { id: 't7', walletId: 'main', catId: 'transit', amount: 900, note: '加油', date: '8/28', week: 1 },
+      { id: 'c1', walletId: 'cash', catId: 'food', amount: 135, note: '早餐店', date: '9/3', week: 0 },
+      { id: 'c2', walletId: 'cash', catId: 'other', amount: 100, note: '香油錢', date: '9/1', week: 0 },
+      { id: 'c3', walletId: 'cash', catId: 'transit', amount: 30, note: '公車', date: '8/29', week: 1 },
+      { id: 'j1', walletId: 'jpy', catId: 'food', amount: 3200, note: '拉麵 · 新宿', date: '9/3', week: 0 },
+      { id: 'j2', walletId: 'jpy', catId: 'transit', amount: 1580, note: 'JR 一日券', date: '9/2', week: 0 },
+      { id: 'j3', walletId: 'jpy', catId: 'fun', amount: 8600, note: '美術館', date: '9/1', week: 0 },
+      { id: 'j4', walletId: 'jpy', catId: 'daily', amount: 2400, note: '藥妝', date: '8/30', week: 1 },
+    ],
+  }
+
+  componentWillUnmount() {
+    if (this.toastTimer) clearTimeout(this.toastTimer)
+  }
+
+  theme() {
+    return this.state.theme ?? this.props.theme ?? 'light'
+  }
+
+  accent() {
+    return this.props.accent ?? '#c1502e'
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg })
+    if (this.toastTimer) clearTimeout(this.toastTimer)
+    this.toastTimer = setTimeout(() => this.setState({ toast: null }), 2600)
+  }
+
+  cat(id) {
+    return CATS.find((c) => c.id === id) ?? CATS[7]
+  }
+
+  tint(color, dark) {
+    return color + (dark ? '2e' : '1f')
+  }
+
+  seg(active, dark) {
+    if (active) {
+      return {
+        bg: dark ? '#48484d' : '#ffffff',
+        fg: dark ? '#ffffff' : '#111114',
+        shadow: '0 1px 3px rgba(0,0,0,0.16)',
+      }
+    }
+    return { bg: 'transparent', fg: dark ? '#98989f' : '#6b6b70', shadow: 'none' }
+  }
+
+  renderVals() {
+    const s = this.state
+    const dark = this.theme() === 'dark'
+    const accent = this.accent()
+    const vars = dark
+      ? {
+          '--bg': '#000000',
+          '--card': '#1c1c1e',
+          '--fg': '#ffffff',
+          '--fg2': '#98989f',
+          '--fg3': '#6c6c72',
+          '--sep': '#2c2c2e',
+          '--track': '#2c2c2e',
+          '--barbg': 'rgba(10,10,12,0.8)',
+          '--sheet': 'rgba(44,44,46,0.96)',
+          '--keypad': '#151517',
+          '--key': '#3a3a3c',
+          '--accent': accent,
+        }
+      : {
+          '--bg': '#f2f1ef',
+          '--card': '#ffffff',
+          '--fg': '#111114',
+          '--fg2': '#6b6b70',
+          '--fg3': '#a3a3a8',
+          '--sep': '#e6e3df',
+          '--track': '#ece9e6',
+          '--barbg': 'rgba(242,241,239,0.86)',
+          '--sheet': 'rgba(255,255,255,0.96)',
+          '--keypad': '#e2dfda',
+          '--key': '#ffffff',
+          '--accent': accent,
+        }
+
+    const wcfg = WALLETS.find((w) => w.id === s.walletId) ?? WALLETS[0]
+    const sym = wcfg.sym
+    const budget = wcfg.budget
+    const walletTxs = s.txs.filter((t) => t.walletId === s.walletId)
+    const weekTxs = walletTxs.filter((t) => t.week === 0)
+    const used = weekTxs.reduce((a, t) => a + t.amount, 0)
+    const remaining = budget - used
+    const daysLeft = 4
+
+    const groupDefs = [
+      { key: 0, label: '本週 · 8/31–9/6' },
+      { key: 1, label: '上週 · 8/24–8/30' },
+    ]
+    const groups = groupDefs
+      .map((g) => {
+        const items = walletTxs.filter((t) => t.week === g.key)
+        if (items.length === 0) return null
+        const last = items.length - 1
+        return {
+          label: g.label,
+          total: '-' + nt(items.reduce((a, t) => a + t.amount, 0), sym),
+          items: items.map((t, i) => {
+            const c = this.cat(t.catId)
+            const open = s.openId === t.id
+            const dragging = s.dragId === t.id
+            const x = dragging ? s.dragX : open ? -88 : 0
+            let radius = '0'
+            if (i === 0 && i === last) radius = '16px'
+            else if (i === 0) radius = '16px 16px 0 0'
+            else if (i === last) radius = '0 0 16px 16px'
+            return {
+              category: c.name,
+              icon: c.icon,
+              tint: this.tint(c.color, dark),
+              sub: t.date + (t.note ? ' · ' + t.note : ''),
+              amount: '-' + nt(t.amount, sym),
+              amountColor: 'var(--fg, #111114)',
+              transform: 'translateX(' + x + 'px)',
+              transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.2,0.8,0.2,1)',
+              radius,
+              down: (e) => {
+                this.startX = e.clientX
+                this.setState({ dragId: t.id, dragX: s.openId === t.id ? -88 : 0 })
+              },
+              move: (e) => {
+                if (this.state.dragId !== t.id) return
+                const base = this.state.openId === t.id ? -88 : 0
+                const dx = Math.max(-96, Math.min(0, base + e.clientX - this.startX))
+                this.setState({ dragX: dx })
+              },
+              up: () => {
+                if (this.state.dragId !== t.id) return
+                const openNow = this.state.dragX < -44
+                this.setState({ dragId: null, dragX: 0, openId: openNow ? t.id : null })
+              },
+              open: () => {
+                if (this.state.openId === t.id) return
+                this.flash('點列可以進編輯 · 左滑可刪除')
+              },
+              sym,
+              remove: () => {
+                this.setState((prev) => ({
+                  txs: prev.txs.filter((x) => x.id !== t.id),
+                  openId: null,
+                }))
+                this.flash('已刪除 ' + c.name + ' ' + nt(t.amount, sym))
+              },
+            }
+          }),
+        }
+      })
+      .filter(Boolean)
+
+    const rangeTxs = s.range === 'week' ? weekTxs : walletTxs
+    const rangeSum = rangeTxs.reduce((a, t) => a + t.amount, 0)
+    const byCat = CATS.map((c) => ({
+      color: c.color,
+      name: c.icon + ' ' + c.name,
+      value: rangeTxs.filter((t) => t.catId === c.id).reduce((a, t) => a + t.amount, 0),
+    }))
+      .filter((e) => e.value > 0)
+      .sort((a, b) => b.value - a.value)
+
+    const CIRC = 2 * Math.PI * 42
+    let acc = 0
+    const donut = byCat.map((e) => {
+      const frac = rangeSum ? e.value / rangeSum : 0
+      const dash = frac * CIRC
+      const seg = { color: e.color, dash: dash.toFixed(2) + ' ' + (CIRC - dash).toFixed(2), offset: (-acc * CIRC).toFixed(2) }
+      acc += frac
+      return seg
+    })
+    const legend = byCat.map((e) => {
+      const pct = rangeSum ? Math.round((e.value / rangeSum) * 100) : 0
+      return { color: e.color, name: e.name, amount: nt(e.value, sym), percent: pct + '%', width: pct + '%' }
+    })
+
+    const scale = budget / 2000
+    const trendAll = TREND.map((t) => ({ label: t.label, amount: Math.round((t.amount * scale) / 10) * 10 })).concat([
+      { label: '8/31', amount: used, current: true },
+    ])
+    const max = Math.max(1, ...trendAll.map((t) => t.amount))
+    const avg = trendAll.reduce((a, t) => a + t.amount, 0) / trendAll.length
+    const trend = trendAll.map((t, i) => {
+      const h = (t.amount / max) * 92
+      return {
+        x: i * 40 + 7,
+        cx: i * 40 + 20,
+        y: (98 - h).toFixed(1),
+        h: h.toFixed(1),
+        fill: t.current ? accent : dark ? '#3a3a3c' : '#d8d4cf',
+        label: t.label,
+        labelFill: t.current ? accent : 'var(--fg3, #a3a3a8)',
+      }
+    })
+    const avgY = 98 - (avg / max) * 92
+
+    const wallets = WALLETS.map((w) => {
+      const spent = s.txs
+        .filter((t) => t.walletId === w.id && t.week === 0)
+        .reduce((a, t) => a + t.amount, 0)
+      return { id: w.id, name: w.name, sub: w.code + ' · 本週還可以花 ' + nt(w.budget - spent, w.sym) }
+    })
+    const currentWallet = wallets.find((w) => w.id === s.walletId) ?? wallets[0]
+
+    const digits = s.amount
+    const amountNum = Number(digits || '0')
+    const segType = (k) => this.seg(s.type === k, dark)
+    const segRange = (k) => this.seg(s.range === k, dark)
+    const pill = (k) =>
+      s.dateKey === k
+        ? { bg: accent, fg: '#ffffff' }
+        : { bg: 'var(--track, #ece9e6)', fg: 'var(--fg2, #6b6b70)' }
+
+    const keyDefs = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '⌫']
+    const keys = keyDefs.map((label) => ({
+      label,
+      tap: () => {
+        this.setState((prev) => {
+          if (label === '⌫') return { amount: prev.amount.slice(0, -1) }
+          const next = (prev.amount + label).replace(/^0+(?=\d)/, '')
+          return { amount: next.length > 8 ? prev.amount : next }
+        })
+      },
+    }))
+
+    const outer = { version: s.version, theme: this.theme() }
+    const tabSeg = (active) => this.seg(active, false)
+
+    return {
+      themeStyle: vars,
+      isNew: s.version === 'new',
+      isOld: s.version === 'old',
+      showNew: () => this.setState({ version: 'new' }),
+      showOld: () => this.setState({ version: 'old', screen: 'home' }),
+      setLight: () => this.setState({ theme: 'light' }),
+      setDark: () => this.setState({ theme: 'dark' }),
+      newTabBg: tabSeg(s.version === 'new').bg,
+      newTabFg: tabSeg(s.version === 'new').fg,
+      newTabShadow: tabSeg(s.version === 'new').shadow,
+      oldTabBg: tabSeg(s.version === 'old').bg,
+      oldTabFg: tabSeg(s.version === 'old').fg,
+      oldTabShadow: tabSeg(s.version === 'old').shadow,
+      lightTabBg: tabSeg(outer.theme === 'light').bg,
+      lightTabFg: tabSeg(outer.theme === 'light').fg,
+      lightTabShadow: tabSeg(outer.theme === 'light').shadow,
+      darkTabBg: tabSeg(outer.theme === 'dark').bg,
+      darkTabFg: tabSeg(outer.theme === 'dark').fg,
+      darkTabShadow: tabSeg(outer.theme === 'dark').shadow,
+
+      atHome: s.version === 'new' && s.screen === 'home',
+      atStats: s.version === 'new' && s.screen === 'stats',
+      atAdd: s.version === 'new' && s.screen === 'add',
+      showTabs: s.version === 'new' && s.screen !== 'add',
+      goHome: () => this.setState({ screen: 'home' }),
+      goStats: () => this.setState({ screen: 'stats' }),
+      goAdd: () => this.setState({ screen: 'add', amount: '', catId: 'food', dateKey: 'today', type: 'expense' }),
+      cancel: () => this.setState({ screen: 'home' }),
+      homeTabColor: s.screen === 'home' ? accent : 'var(--fg3, #a3a3a8)',
+      statsTabColor: s.screen === 'stats' ? accent : 'var(--fg3, #a3a3a8)',
+
+      walletName: currentWallet.name,
+      walletCode: wcfg.code,
+      remainingText: nt(remaining, sym),
+      usedText: nt(used, sym),
+      budgetText: nt(budget, sym),
+      usedPercentWidth: Math.min(100, Math.round((used / budget) * 100)) + '%',
+      daysLeft,
+      perDayText: nt(Math.max(0, remaining) / daysLeft, sym),
+      groups,
+
+      openWallets: () => this.setState({ walletSheet: true }),
+      closeWallets: () => this.setState({ walletSheet: false }),
+      walletSheet: s.walletSheet,
+      walletList: wallets.map((w) => ({
+        name: w.name,
+        sub: w.sub,
+        checkOpacity: w.id === s.walletId ? 1 : 0,
+        pick: () => {
+          this.setState({ walletId: w.id, walletSheet: false })
+          this.flash('已切換到 ' + w.name)
+        },
+      })),
+
+      range: s.range,
+      rangeLabel: s.range === 'week' ? '本週' : '本月',
+      rangeTotal: nt(rangeSum, sym),
+      donut,
+      legend,
+      trend,
+      avgY: avgY.toFixed(1),
+      avgLabelY: (avgY - 4).toFixed(1),
+      avgText: nt(avg, sym),
+      trendCompare: used < avg ? '比平均少 ' + nt(avg - used, sym) : '比平均多 ' + nt(used - avg, sym),
+      setWeek: () => this.setState({ range: 'week' }),
+      setMonth: () => this.setState({ range: 'month' }),
+      weekBg: segRange('week').bg,
+      weekFg: segRange('week').fg,
+      weekShadow: segRange('week').shadow,
+      monthBg: segRange('month').bg,
+      monthFg: segRange('month').fg,
+      monthShadow: segRange('month').shadow,
+
+      setExpense: () => this.setState({ type: 'expense' }),
+      setIncome: () => this.setState({ type: 'income' }),
+      expenseBg: segType('expense').bg,
+      expenseFg: segType('expense').fg,
+      expenseShadow: segType('expense').shadow,
+      incomeBg: segType('income').bg,
+      incomeFg: segType('income').fg,
+      incomeShadow: segType('income').shadow,
+      amountDisplay: (s.type === 'expense' ? '' : '+') + sym + (digits ? amountNum.toLocaleString('en-US') : '0'),
+      amountColorLive: digits ? (s.type === 'income' ? '#2f8f63' : 'var(--fg, #111114)') : 'var(--fg3, #a3a3a8)',
+      cats: CATS.map((c) => ({
+        icon: c.icon,
+        name: c.name,
+        tint: this.tint(c.color, dark),
+        ring: s.catId === c.id ? '0 0 0 2.5px ' + c.color : 'none',
+        labelColor: s.catId === c.id ? 'var(--fg, #111114)' : 'var(--fg2, #6b6b70)',
+        pick: () => this.setState({ catId: c.id }),
+      })),
+      setToday: () => this.setState({ dateKey: 'today' }),
+      setYesterday: () => this.setState({ dateKey: 'yesterday' }),
+      setPick: () => this.setState({ dateKey: 'pick' }),
+      todayBg: pill('today').bg,
+      todayFg: pill('today').fg,
+      ydayBg: pill('yesterday').bg,
+      ydayFg: pill('yesterday').fg,
+      pickBg: pill('pick').bg,
+      pickFg: pill('pick').fg,
+      keys,
+      submitOpacity: amountNum > 0 ? 1 : 0.4,
+      submit: () => {
+        if (amountNum <= 0) return
+        const c = this.cat(s.catId)
+        const id = 'n' + Date.now()
+        this.setState((prev) => ({
+          txs: [
+            { id, walletId: prev.walletId, catId: prev.catId, amount: amountNum, note: '', date: prev.dateKey === 'yesterday' ? '9/2' : '9/3', week: 0 },
+          ].concat(prev.txs),
+          screen: 'home',
+          amount: '',
+        }))
+        this.flash('已記錄 ' + c.name + ' ' + nt(amountNum, sym))
+      },
+      toast: s.toast,
+
+      oldAtHome: s.version === 'old' && s.screen === 'home',
+      oldAtAdd: s.version === 'old' && s.screen === 'add',
+      oldAtStats: s.version === 'old' && s.screen === 'stats',
+      oldHome: () => this.setState({ screen: 'home' }),
+      oldAdd: () => this.setState({ screen: 'add' }),
+      oldStats: () => this.setState({ screen: 'stats' }),
+      oldRows: weekTxs.map((t) => {
+        const c = this.cat(t.catId)
+        return {
+          date: '2026-0' + (t.date === '9/1' || t.date === '9/2' || t.date === '9/3' ? '9-0' + t.date.slice(2) : '8-29'),
+          label: c.icon + ' ' + c.name,
+          note: t.note,
+          amount: '-' + nt(t.amount, sym),
+        }
+      }),
+    }
+  }
+}
+
+</script>
+</body>
+</html>
