@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #f7f6f4; font-family: "Noto Sans TC", system-ui, sans-serif; }
+  a { color: #1a1a1a; }
+  a:hover { color: #6b5b4e; }
+</style>
+</helmet>
+
+<div style="max-width: 1180px; margin: 0 auto; padding: 64px 40px 120px; color: #1a1a1a; line-height: 1.6; text-wrap: pretty">
+
+  <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 32px; border-bottom: 1px solid #ddd8d1">
+    <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: #8a8178; text-transform: uppercase">jojomango/expense-tracker · main</p>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.02em">記帳本 · 現況分析</h1>
+    <p style="margin: 0; max-width: 62ch; font-size: 16px; color: #55504a">三個主要畫面依 repo 現行程式碼重繪,標註出讓它「看起來像 POC」的具體原因。下方是分階段的優化提案。</p>
+  </div>
+
+  <section style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; padding: 40px 0; border-bottom: 1px solid #ddd8d1">
+    <div>
+      <h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 700">底層沒有問題</h2>
+      <p style="margin: 0; font-size: 15px; color: #55504a">domain 層是零依賴的純 TypeScript,持久層用 Dexie/IndexedDB,狀態用 zustand,CI 有 lint / typecheck / 單元測試覆蓋率門檻 / Playwright e2e。錢包、多幣別、週預算與總預算、備份都已經實作完成。這次要改的東西全部落在 <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #ebe7e1; padding: 1px 5px; border-radius: 3px">src/ui/</span>。</p>
+    </div>
+    <div>
+      <h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 700">UI 層是預設值的集合</h2>
+      <p style="margin: 0; font-size: 15px; color: #55504a">全部畫面只用了 Tailwind 的 slate 色階與預設圓角陰影,沒有自訂 theme、沒有間距節奏、沒有型別階層。所有次要動作都是 <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #ebe7e1; padding: 1px 5px; border-radius: 3px">text-sm underline</span> 的文字連結 —— 這是網頁的語彙,不是手機 app 的語彙。這正是「陽春」的來源。</p>
+    </div>
+  </section>
+
+  <div style="display: flex; flex-direction: column; gap: 88px; padding-top: 56px">
+
+    <div style="display: grid; grid-template-columns: 390px 1fr; gap: 72px; align-items: start">
+      <div style="position: relative; width: 390px; border-radius: 24px; background: #f8fafc; border: 1px solid #cfcac3; box-shadow: 0 12px 32px rgba(0,0,0,0.08)">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; border-radius: 24px 24px 0 0">
+          <span style="font-size: 18px; font-weight: 500">記帳本</span>
+          <span style="position: relative; display: flex; align-items: center; gap: 16px; font-size: 14px; color: #64748b">
+            <span style="position: absolute; top: -26px; right: -13px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">1</span>
+            <span style="text-decoration: underline">分類</span>
+            <span style="text-decoration: underline">統計</span>
+            <span style="text-decoration: underline">設定</span>
+          </span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px; padding: 16px">
+          <div style="position: relative; display: flex; align-items: center; justify-content: space-between">
+            <span style="position: absolute; top: 0; left: -32px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">2</span>
+            <span style="font-size: 18px; font-weight: 500">主錢包</span>
+            <span style="font-size: 14px; color: #64748b; text-decoration: underline">管理錢包</span>
+          </div>
+          <div style="position: relative; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+            <span style="position: absolute; top: 16px; left: -13px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">3</span>
+            <p style="margin: 0; font-size: 14px; color: #64748b">本週餘額</p>
+            <p style="margin: 0; font-size: 24px; font-weight: 500">NT$1,240</p>
+          </div>
+          <div style="position: relative; display: flex; align-items: center; justify-content: space-between">
+            <span style="position: absolute; top: 4px; right: -32px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">4</span>
+            <span style="font-size: 14px; font-weight: 500; color: #64748b">交易紀錄</span>
+            <span style="border-radius: 4px; background: #0f172a; color: #fff; padding: 6px 12px; font-size: 14px">＋ 新增</span>
+          </div>
+          <div style="position: relative">
+            <span style="position: absolute; top: 48px; left: -32px; z-index: 2; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">6</span>
+            <span style="position: absolute; top: 48px; right: -32px; z-index: 2; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">7</span>
+            <p style="position: relative; margin: 0 0 4px; padding: 0 4px; font-size: 12px; font-weight: 500; color: #94a3b8">
+              <span style="position: absolute; top: -3px; left: -32px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">5</span>
+              2026-08-31 ~ 2026-09-06
+            </p>
+            <div style="position: relative; overflow: hidden; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e2e8f0">
+                <div>
+                  <p style="margin: 0; font-size: 14px; color: #64748b">2026-09-03</p>
+                  <p style="margin: 0; font-size: 16px">🍜 餐飲</p>
+                  <p style="margin: 0; font-size: 12px; color: #94a3b8">午餐 便當</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 14px">
+                  <span style="font-size: 16px">-NT$180</span>
+                  <span style="color: #64748b; text-decoration: underline">編輯</span>
+                  <span style="color: #dc2626; text-decoration: underline">刪除</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e2e8f0">
+                <div>
+                  <p style="margin: 0; font-size: 14px; color: #64748b">2026-09-02</p>
+                  <p style="margin: 0; font-size: 16px">🚌 交通</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 14px">
+                  <span style="font-size: 16px">-NT$45</span>
+                  <span style="color: #64748b; text-decoration: underline">編輯</span>
+                  <span style="color: #dc2626; text-decoration: underline">刪除</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px">
+                <div>
+                  <p style="margin: 0; font-size: 14px; color: #64748b">2026-09-01</p>
+                  <p style="margin: 0; font-size: 16px">💰 薪資</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 14px">
+                  <span style="font-size: 16px; color: #059669">+NT$32,000</span>
+                  <span style="color: #64748b; text-decoration: underline">編輯</span>
+                  <span style="color: #dc2626; text-decoration: underline">刪除</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p style="margin: 0 0 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: #8a8178">SRC/UI/HOME.TSX · TRANSACTIONLIST.TSX</p>
+        <h2 style="margin: 0 0 24px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">首頁</h2>
+        <div style="display: flex; flex-direction: column; gap: 18px">
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">1</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">導覽藏在右上角,而且是三個底線小字</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">14px 的 underline 連結擠在標題列右側,單手握持時拇指到不了,觸控目標遠低於 44px。手機 app 的分頁應該在底部。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">2</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">沒有錢包切換入口</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">錢包名稱只是純文字,要換錢包得先進「管理錢包」頁再點「切換」。多錢包是這個 app 的核心功能,卻要兩次跳頁。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">3</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">餘額卡只有一個數字,沒有脈絡</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">domain 層的 <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #ebe7e1; padding: 1px 5px; border-radius: 3px">calculateTotalBalance</span> 已經算出 usedPercent,首頁卻只印成一行小字。缺少進度條、本週剩幾天、日均可用額 —— 這些是使用者真正想看的。24px 的數字也太小,它應該是全頁最大的東西。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">4</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">最高頻的動作,優先級最低</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">「＋ 新增」是一個 14px 的小按鈕,夾在列表標題旁。記帳 app 九成的操作就是新增一筆,它應該是螢幕上最好按到的元素(浮動按鈕或底部列中央)。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">5</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">分組標題直接印 ISO 日期</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a"><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #ebe7e1; padding: 1px 5px; border-radius: 3px">2026-08-31 ~ 2026-09-06</span> 是資料格式,不是人話。應該是「本週 · 8/31–9/6」並附上該週小計。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">6</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">列表沒有視覺層級</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">日期、分類、備註三行字重相近,每筆都重複印完整日期(已經在週分組裡了)。分類 emoji 沒有色塊承載,金額字級與說明相同,無法快速掃視「這週錢花在哪」。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">7</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">每一列都掛著「編輯 / 刪除」</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">兩個永久顯示的文字連結乘上每一筆交易,是整個列表最大的視覺噪音,而且緊貼金額、間距只有 12px,手機上極易誤觸刪除。應改為點列開編輯、左滑刪除。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 390px 1fr; gap: 72px; align-items: start">
+      <div style="position: relative; width: 390px; border-radius: 24px; background: #fff; border: 1px solid #cfcac3; box-shadow: 0 12px 32px rgba(0,0,0,0.08)">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; border-radius: 24px 24px 0 0">
+          <span style="font-size: 18px; font-weight: 500">記帳本</span>
+          <span style="display: flex; align-items: center; gap: 16px; font-size: 14px; color: #64748b">
+            <span style="text-decoration: underline">分類</span>
+            <span style="text-decoration: underline">統計</span>
+            <span style="text-decoration: underline">設定</span>
+          </span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px; padding: 24px; max-width: 384px">
+          <p style="position: relative; margin: 0; font-size: 20px; font-weight: 500">
+            <span style="position: absolute; top: 2px; left: -21px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">8</span>
+            新增交易
+          </p>
+          <div style="display: flex; gap: 8px">
+            <span style="flex: 1; text-align: center; border-radius: 4px; background: #0f172a; color: #fff; padding: 8px 12px; font-size: 16px">支出</span>
+            <span style="flex: 1; text-align: center; border-radius: 4px; background: #f1f5f9; padding: 8px 12px; font-size: 16px">收入</span>
+          </div>
+          <div style="position: relative">
+            <span style="position: absolute; top: 22px; left: -21px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">9</span>
+            <p style="margin: 0; font-size: 14px; font-weight: 500">金額</p>
+            <div style="margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px; color: #0f172a">180</div>
+          </div>
+          <div style="position: relative">
+            <span style="position: absolute; top: 22px; left: -21px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">10</span>
+            <p style="margin: 0; font-size: 14px; font-weight: 500">分類</p>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px; color: #0f172a">
+              <span>🍜 餐飲</span>
+              <span style="color: #64748b">▾</span>
+            </div>
+          </div>
+          <div style="position: relative">
+            <span style="position: absolute; top: 22px; left: -21px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">11</span>
+            <p style="margin: 0; font-size: 14px; font-weight: 500">日期</p>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px; color: #0f172a">
+              <span>2026/09/03</span>
+              <span style="color: #64748b">📅</span>
+            </div>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 14px; font-weight: 500">備註</p>
+            <div style="margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; font-size: 16px; color: #94a3b8">午餐 便當</div>
+          </div>
+          <div style="position: relative; border-radius: 4px; background: #0f172a; color: #fff; padding: 8px 16px; font-size: 16px; text-align: center">
+            <span style="position: absolute; top: 8px; right: -13px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">12</span>
+            送出
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p style="margin: 0 0 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: #8a8178">SRC/UI/TRANSACTIONFORM.TSX</p>
+        <h2 style="margin: 0 0 24px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">新增交易</h2>
+        <div style="display: flex; flex-direction: column; gap: 18px">
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">8</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">這是一張網頁表單,不是記帳流程</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">五個 label + input 等權重垂直堆疊。記帳的實際節奏是「金額 → 分類 → 完成」,金額應該獨佔畫面上半部、用大字顯示,其餘欄位收在下面。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">9</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">金額欄跟備註欄一樣大</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">只有 <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #ebe7e1; padding: 1px 5px; border-radius: 3px">inputMode="decimal"</span>,靠系統鍵盤。沒有幣別符號、沒有千分位、輸入時看不到格式化結果,打錯一位數很難察覺。建議自製數字鍵台或至少放大字級並即時格式化。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">10</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">分類用原生下拉選單</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">手機上會彈出系統選單、一次只看到幾項,分類的 emoji 與顏色完全發揮不了作用。分類數量有限,直接攤成圖示網格,一點即選、少一次互動。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">11</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">日期沒有快捷</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">九成的記帳都發生在當天或前一天,卻要開系統日曆。放「今天 / 昨天 / 選日期」三顆膠囊鍵就能消掉這一步。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">12</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">送出鍵跟著內容走</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">鍵盤彈出後主要按鈕會被推到視窗外,得先收鍵盤再滾動。主動作應該固定在底部安全區,並在成功後回首頁時給一個確認提示(目前是靜默 navigate)。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 390px 1fr; gap: 72px; align-items: start">
+      <div style="position: relative; width: 390px; border-radius: 24px; background: #f8fafc; border: 1px solid #cfcac3; box-shadow: 0 12px 32px rgba(0,0,0,0.08)">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; border-radius: 24px 24px 0 0">
+          <span style="font-size: 18px; font-weight: 500">記帳本</span>
+          <span style="display: flex; align-items: center; gap: 16px; font-size: 14px; color: #64748b">
+            <span style="text-decoration: underline">分類</span>
+            <span style="text-decoration: underline">統計</span>
+            <span style="text-decoration: underline">設定</span>
+          </span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 24px; padding: 16px">
+          <p style="margin: 0; font-size: 20px; font-weight: 500">統計</p>
+          <div style="display: flex; flex-direction: column; gap: 8px; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <span style="font-size: 14px; font-weight: 500; color: #64748b">分類支出佔比</span>
+              <span style="display: flex; gap: 4px; font-size: 12px">
+                <span style="border-radius: 4px; background: #0f172a; color: #fff; padding: 4px 8px">本週</span>
+                <span style="border-radius: 4px; background: #f1f5f9; padding: 4px 8px">本月</span>
+              </span>
+            </div>
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px">
+              <span style="position: absolute; top: 60px; left: -29px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">13</span>
+              <svg viewBox="0 0 100 100" style="width: 160px; height: 160px; transform: rotate(-90deg)">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#0f172a" stroke-width="18" stroke-dasharray="113 138" stroke-dashoffset="0"></circle>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#2563eb" stroke-width="18" stroke-dasharray="75 176" stroke-dashoffset="-113"></circle>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#059669" stroke-width="18" stroke-dasharray="38 213" stroke-dashoffset="-188"></circle>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#d97706" stroke-width="18" stroke-dasharray="25 226" stroke-dashoffset="-226"></circle>
+              </svg>
+              <div style="position: relative; display: flex; flex-direction: column; gap: 4px; width: 100%; font-size: 14px">
+                <span style="position: absolute; top: 24px; right: -29px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">14</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #0f172a"></span>🍜 餐飲</span>
+                  <span style="color: #64748b">NT$1,840(45%)</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #2563eb"></span>🛒 日用</span>
+                  <span style="color: #64748b">NT$1,220(30%)</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #059669"></span>🚌 交通</span>
+                  <span style="color: #64748b">NT$610(15%)</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; background: #d97706"></span>📦 未分類</span>
+                  <span style="color: #64748b">NT$410(10%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+            <span style="font-size: 14px; font-weight: 500; color: #64748b">近 8 週支出趨勢</span>
+            <div style="position: relative">
+              <span style="position: absolute; top: 20px; left: -29px; z-index: 2; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">15</span>
+              <svg viewBox="0 0 320 110" style="width: 100%">
+                <rect x="6" y="42" width="28" height="58" fill="#2563eb"></rect>
+                <rect x="46" y="18" width="28" height="82" fill="#2563eb"></rect>
+                <rect x="86" y="61" width="28" height="39" fill="#2563eb"></rect>
+                <rect x="126" y="30" width="28" height="70" fill="#2563eb"></rect>
+                <rect x="166" y="72" width="28" height="28" fill="#2563eb"></rect>
+                <rect x="206" y="8" width="28" height="92" fill="#2563eb"></rect>
+                <rect x="246" y="55" width="28" height="45" fill="#2563eb"></rect>
+                <rect x="286" y="36" width="28" height="64" fill="#2563eb"></rect>
+              </svg>
+              <div style="position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 12px; color: #64748b">
+                <span style="position: absolute; top: 8px; right: -29px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">16</span>
+                <span>07-13<br />NT$2,100</span>
+                <span>07-20<br />NT$2,980</span>
+                <span>07-27<br />NT$1,410</span>
+                <span>08-03<br />NT$2,540</span>
+                <span>08-10<br />NT$1,020</span>
+                <span>08-17<br />NT$3,340</span>
+                <span>08-24<br />NT$1,630</span>
+                <span>08-31<br />NT$2,320</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p style="margin: 0 0 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: #8a8178">SRC/UI/STATS.TSX</p>
+        <h2 style="margin: 0 0 24px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">統計</h2>
+        <div style="display: flex; flex-direction: column; gap: 18px">
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">13</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">圓環中間是空的</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">最重要的數字(這段期間總支出)沒有出現在圖上,得自己把圖例加總。中心放總額與期間,這張圖才算完整。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">14</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">分類顏色不固定</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a"><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #ebe7e1; padding: 1px 5px; border-radius: 3px">PIE_COLORS[index % 8]</span> 依「本期金額排序」發色,所以同一個分類這週是深藍、下週可能變綠。顏色應該綁在分類本身(存進 category),圖表才有記憶點。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">15</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">趨勢圖是八根裸柱</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">沒有基準線、沒有 y 軸刻度、沒有平均線,也看不出哪一根是本週。加一條平均虛線並把當週柱子標記出來,「這週比平常花得多還少」才一眼看得出來。</p>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 24px 1fr; gap: 14px; align-items: start">
+            <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: #1a1a1a; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px">16</span>
+            <div>
+              <p style="margin: 0; font-size: 16px; font-weight: 500">圖例與柱子對不上</p>
+              <p style="margin: 2px 0 0; font-size: 15px; color: #55504a">八個週別用 4 欄 grid 排成兩列,和上方八根柱子的水平位置完全錯開,要用數的方式配對。標籤應該直接落在柱子下方。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section style="margin-top: 96px; padding-top: 40px; border-top: 1px solid #ddd8d1">
+    <h2 style="margin: 0 0 8px; font-size: 28px; font-weight: 700; letter-spacing: -0.01em">優化提案</h2>
+    <p style="margin: 0 0 36px; max-width: 62ch; font-size: 16px; color: #55504a">全部落在 UI 層,domain 與 persistence 不需要動(唯一例外是分類固定色,需要在 category 加一個欄位)。</p>
+
+    <div style="display: flex; flex-direction: column; gap: 28px">
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 32px; padding-bottom: 28px; border-bottom: 1px solid #e6e1da">
+        <div>
+          <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #1a1a1a">階段 1</p>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #8a8178">骨架與導覽<br />改動最大、收益最高</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 15px; color: #55504a">
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">底部分頁列</span> —— 首頁 / 統計 / 設定三個分頁固定在底部,中央一顆記帳主鍵。右上角的底線連結全部移除。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">錢包切換移到標題</span> —— 錢包名稱變成可點的下拉,直接在首頁切換與看到各錢包餘額。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">建立設計語彙</span> —— 自訂 Tailwind theme(而非 slate 預設):一組字級階層、一個間距節奏、統一圓角與陰影、深淺色雙版。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">安全區與 PWA 外觀</span> —— 處理 <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">env(safe-area-inset-*)</span>、狀態列色、加入主畫面後的全螢幕表現。</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 32px; padding-bottom: 28px; border-bottom: 1px solid #e6e1da">
+        <div>
+          <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #1a1a1a">階段 2</p>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #8a8178">記帳流程<br />日常摩擦</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 15px; color: #55504a">
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">金額優先的輸入頁</span> —— 大字金額 + 即時千分位 + 幣別符號,支出/收入用分段控制,主鍵固定底部。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">分類圖示網格</span> —— 取代原生 select,一點即選;常用分類自動排前。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">日期快捷</span> —— 今天 / 昨天 / 選日期。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">列表瘦身</span> —— 移除每列的編輯/刪除文字鍵,改為點列進編輯、左滑刪除(附還原);週分組標題改人類語言並顯示週小計。</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 32px">
+        <div>
+          <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #1a1a1a">階段 3</p>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #8a8178">資訊呈現<br />打磨</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 15px; color: #55504a">
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">預算卡重做</span> —— 大字餘額 + 進度條 + 本週剩幾天 + 日均可用額;超支狀態用整卡變色而非一行紅字。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">分類固定色</span> —— 在 category 加 color 欄位(需要一次 Dexie migration),圖表與列表共用同一組顏色。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">圖表補脈絡</span> —— 圓環中心放總額、趨勢圖加平均線與當週標記、標籤對齊柱子、加上與上期的比較。</p>
+          <p style="margin: 0"><span style="color: #1a1a1a; font-weight: 500">狀態與回饋</span> —— 空狀態、載入骨架、操作成功的 toast、刪除的還原機制。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+</x-dc>
+</body>
+</html>

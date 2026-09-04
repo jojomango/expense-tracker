@@ -19,6 +19,9 @@
 | 5 | 預算與即時餘額 | ✅ DONE | [#6](https://github.com/jojomango/expense-tracker/pull/6) |
 | 6 | 分類與統計 | ✅ DONE | [#7](https://github.com/jojomango/expense-tracker/pull/7) |
 | 7 | PWA、備份與打磨 | ✅ DONE | [#9](https://github.com/jojomango/expense-tracker/pull/9) |
+| 8 | UI 地基與導覽 | **NEXT** | |
+| 9 | 記帳流程 | ⬜ TODO | |
+| 10 | 資訊呈現與分類固定色 | ⬜ TODO | |
 
 ---
 
@@ -845,6 +848,100 @@ E2E-6／E2E-7 屬於 Phase 7）。上面列的都是「規格沒細講、或工�
 屬於「v1 範圍外的打磨」或人類自訂的新 phase**，不在目前 TASKS.md 的
 狀態機描述範圍內——人類需要決定要不要開一個新的 Phase 8（例如：
 統一錯誤處理風格、無障礙完整稽核、自訂幣別支援、實機 PWA 安裝驗收）。
+
+---
+
+## Phase 8 — UI 地基與導覽 **NEXT**
+
+**目標:** 建立設計 token 與底部導覽骨架。這個 phase 不改任何業務邏輯。
+
+**必讀:** `UI-SPEC.md` §1–§4.1、§7
+
+**要做的事**
+
+- `tailwind.config.js`:把 `UI-SPEC.md` §2 的顏色、字級、圓角、陰影寫進 `theme.extend`。深淺色沿用現有 `darkMode: 'class'`,顏色用 CSS 變數 + `dark` class 切換,不要在元件裡寫死 hex
+- `index.html` / `src/index.css`:處理 `env(safe-area-inset-*)`、`theme-color` meta(light `#f2f1ef` / dark `#000000`)、`-webkit-tap-highlight-color: transparent`
+- 新增 `src/ui/BottomTabBar.tsx`(§3.1),掛在 `src/app/App.tsx`;表單路由隱藏分頁列
+- `src/app/App.tsx`:移除標題列的「分類 / 統計 / 設定」三個 underline 連結
+- 新增 `src/ui/WalletSheet.tsx`(§7);首頁錢包名稱改為可點按鈕
+- `src/ui/Categories.tsx` 的入口移到設定頁內(路由保留 `/categories`)
+- 新增 `src/ui/Toast.tsx`:單一 toast、2600ms 自動消失、可選附一個動作鍵
+
+**驗收**
+
+- `/`、`/stats`、`/settings` 都能從分頁列到達,`/transactions/new` 不顯示分頁列
+- 錢包 sheet 能切換錢包,切換後首頁餘額與列表跟著換
+- 深淺色兩版都可讀
+- 對應測案 T7.1、T7.2 全綠;`npm run verify` + `npm run e2e` 全綠
+
+**刻意不做**
+
+預算卡與交易列表的內容重排(Phase 10)、記帳頁(Phase 9)。這個 phase 的畫面內容可以還是舊的。
+
+---
+
+## Phase 9 — 記帳流程 ⬜ TODO
+
+**目標:** 讓「記一筆」從五欄網頁表單變成金額優先的流程,並讓交易列表瘦身。
+
+**必讀:** `UI-SPEC.md` §4.3、§5
+
+**要做的事**
+
+- 重寫 `src/ui/TransactionForm.tsx`(§5):金額大字置頂 + 即時千分位、分類圖示網格取代 `<select>`、日期 pill、備註收起、主鍵貼底
+- 新增 `src/ui/AmountPad.tsx`:3×4 數字鍵台,鍵序 `1-9 / 00 0 ⌫`,最多 8 位、去前導 0
+- 新增 `src/ui/CategoryGrid.tsx`:4 欄網格,依 `type` 過濾分類
+- 重寫 `src/ui/TransactionList.tsx`(§4.3):移除編輯/刪除文字鍵、分類色塊、副標合併日期與備註、週分組標題改人類語言並顯示小計
+- 左滑刪除:原生 Pointer Events,不引入套件。刪除後 toast 附「還原」
+- 交易列表空狀態
+
+**驗收**
+
+- 新增一筆的操作次數(不含輸入金額)從現況的 5 次降到 2 次
+- 鍵盤不會遮住主鍵(自製鍵台,不呼叫系統鍵盤)
+- 列表列上沒有任何文字鍵;左滑能刪除且能還原
+- 週分組標題不出現 ISO 日期
+- 對應測案 T7.3、T7.4、T8.1、T8.2 全綠;`npm run verify` + `npm run e2e` 全綠
+
+**刻意不做**
+
+分類固定色(Phase 10)—— 這個 phase 的分類色塊先用單一 `track` 底色,不要臨時發明配色。
+
+---
+
+## Phase 10 — 資訊呈現與分類固定色 ⬜ TODO
+
+**目標:** 預算卡與圖表補上脈絡,分類色綁到分類本身。**這個 phase 有 schema 變更。**
+
+**必讀:** `UI-SPEC.md` §4.2、§6、§8;`MIGRATION-category-color.md`
+
+**要做的事**
+
+- `src/domain/category.ts`:`Category` 加 `readonly color: string`;`DefaultCategorySeed` 加 `color`;`DEFAULT_CATEGORIES` 補上 `UI-SPEC.md` §2.2 的色值;`validateCategory` 驗證 `color` 為 `#rrggbb`
+- `src/persistence/db.ts`:Dexie v2 + `upgrade()` 補既有分類的 color(照 `MIGRATION-category-color.md`)
+- `src/ui/CategoryForm.tsx`:加顏色選擇(§2.2 的 11 色色票,不做自由選色)
+- `src/domain/budget.ts`:新增 `daysLeftInWeek` 與 `dailyAllowance`(§8),純函式、時間由參數注入
+- 新增 `src/ui/BudgetCard.tsx`(§4.2),從 `Home.tsx` 抽出:大字餘額 + 進度條 + 已用比例 + 剩餘天數 + 日均可用;超支改為整段變色
+- `src/ui/Stats.tsx`(§6):移除 `PIE_COLORS`、圓環中心疊 HTML 總額、圖例用分類固定色、趨勢圖加平均虛線與當週標記、週別標籤改 HTML `grid-cols-8` 對齊柱子
+- `src/domain/backup.ts`:確認匯出/匯入涵蓋 `color` 欄位,舊備份匯入時補預設色
+
+**驗收**
+
+- 同一分類在本週與本月、在圓環與列表中顏色一致
+- 趨勢圖 8 個週別標籤可見且對齊柱子
+- 匯入 v1 備份不會壞,分類自動補色
+- 對應測案 T7.5、T7.6、T7.7、T8.3 全綠;`npm run verify` + `npm run e2e` 全綠
+
+**刻意不做**
+
+分類色的自訂 hex 輸入(只給色票)。設定頁改版。
+
+### 交接筆記(給 Phase 8 的你)
+
+- `UI-SPEC.md` 的數值是契約,不是建議。要改先停下來寫進 PR 的「需要人類決策」
+- 設計參考在 `docs/design/` 的兩個 `.dc.html`(可用瀏覽器直接開):`優化原型` 是目標樣貌與互動,`現況分析` 標了每個改動要解決的問題
+- 三個 phase 都不需要新套件。圖表手寫 SVG、左滑用 Pointer Events、動畫用 CSS transition
+- Phase 8 的分頁列與 sheet 是後兩個 phase 的地基,先把它做穩,不要順手改內容
 
 ---
 
