@@ -46,4 +46,52 @@ describe('formatAmountDisplay（記帳頁金額顯示，Phase 9 新增，非 TES
   it('三位以上數字加千分位逗號', () => {
     expect(formatAmountDisplay('12345678', 'NT$')).toBe('NT$12,345,678')
   })
+
+  it('小數點後的數字不參與千分位分組', () => {
+    expect(formatAmountDisplay('1234.5', 'NT$')).toBe('NT$1,234.5')
+  })
+
+  it('只輸入到小數點時仍顯示尾端的點', () => {
+    expect(formatAmountDisplay('12.', 'NT$')).toBe('NT$12.')
+  })
+})
+
+/**
+ * 小數點鍵（appendDigit 第三個參數 maxDecimals）——PR #11 review 討論後補上：
+ * 記帳頁改為支援小數輸入（幣別小數位數依 decimalsFor(currency) 決定），
+ * 不是 TESTCASES.md T7.3 的契約項目（T7.3 全部案例都不含小數點），
+ * 但沿用同一組純函式，所以測試放在同一個檔案。
+ */
+describe('appendDigit 的小數點處理（Phase 9 追加，非 TESTCASES.md 契約項目）', () => {
+  it('maxDecimals 為 0（例如 JPY）時，按小數點沒有作用', () => {
+    expect(appendDigit('12', '.', 0)).toBe('12')
+  })
+
+  it('省略 maxDecimals 時預設為 0，行為等同未支援小數（不影響既有 T7.3 呼叫端）', () => {
+    expect(appendDigit('12', '.')).toBe('12')
+  })
+
+  it('空字串按小數點 → 0.', () => {
+    expect(appendDigit('', '.', 2)).toBe('0.')
+  })
+
+  it('已經有小數點時再按一次小數點 → 不變', () => {
+    expect(appendDigit('12.5', '.', 2)).toBe('12.5')
+  })
+
+  it('小數點後輸入位數依 maxDecimals 限制，超過則忽略', () => {
+    expect(appendDigit('12.50', '9', 2)).toBe('12.50')
+  })
+
+  it('小數點後只剩 1 位空間時，按 00 只補 1 位', () => {
+    expect(appendDigit('12.5', '00', 2)).toBe('12.50')
+  })
+
+  it('整數位數上限（8 位）不受小數點影響，各自獨立計算', () => {
+    expect(appendDigit('12345678.', '9', 2)).toBe('12345678.9')
+  })
+
+  it('⌫ 可以刪掉小數點本身', () => {
+    expect(deleteDigit('12.')).toBe('12')
+  })
 })

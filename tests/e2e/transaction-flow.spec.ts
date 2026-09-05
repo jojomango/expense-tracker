@@ -196,3 +196,61 @@ test.describe('T8.2 — 交易列表互動', () => {
     expect(text ?? '').not.toMatch(/\d{4}-\d{2}-\d{2}/)
   })
 })
+
+/**
+ * 小數點鍵（PR #11 review 討論後補上，非 TESTCASES.md 契約項目——T7.3/T8.1 全部
+ * 案例都只涵蓋整數輸入）：幣別小數位數 > 0 才顯示小數點鍵，輸入的小數會完整送出，
+ * 編輯既有交易時也能看到完整小數（不再像最初版本那樣就地四捨五入成整數）。
+ */
+test.describe('金額鍵台的小數點鍵', () => {
+  test('TWD 錢包的鍵台有小數點鍵，輸入 12.5 送出後金額為 NT$12.50', async ({ page }) => {
+    await createFirstWallet(page)
+    await page.getByRole('link', { name: '記一筆' }).click()
+
+    await expect(page.getByTestId('amount-key-.')).toBeVisible()
+    await expect(page.getByTestId('amount-key-00')).toHaveCount(0)
+
+    await page.getByTestId('amount-key-1').click()
+    await page.getByTestId('amount-key-2').click()
+    await page.getByTestId('amount-key-.').click()
+    await page.getByTestId('amount-key-5').click()
+    await expect(page.getByTestId('amount-display')).toHaveText('NT$12.5')
+
+    await page.getByRole('button', { name: '🍜 飲食' }).click()
+    await page.getByRole('button', { name: '記一筆' }).click()
+
+    await expect(page.getByTestId('transaction-item').first()).toContainText('NT$12.50')
+  })
+
+  test('編輯一筆帶小數的交易時，金額鍵台會顯示完整小數（不再被就地四捨五入成整數）', async ({
+    page,
+  }) => {
+    await createFirstWallet(page)
+    await page.getByRole('link', { name: '記一筆' }).click()
+    await page.getByTestId('amount-key-1').click()
+    await page.getByTestId('amount-key-2').click()
+    await page.getByTestId('amount-key-.').click()
+    await page.getByTestId('amount-key-5').click()
+    await page.getByRole('button', { name: '記一筆' }).click()
+
+    await page.getByTestId('transaction-item').first().click()
+    await expect(page).toHaveURL(/\/transactions\/[^/]+\/edit/)
+    // 送出時已經是最小單位 1250（NT$12.50），編輯時還原回鍵台字串會是完整的 "12.50"，
+    // 不是使用者當初輸入的 "12.5"——這是正確的（兩者代表同一個金額），不是 bug。
+    await expect(page.getByTestId('amount-display')).toHaveText('NT$12.50')
+  })
+
+  test('JPY 錢包（0 小數位）的鍵台沒有小數點鍵，維持 00 鍵', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: '建立第一個錢包' })).toBeVisible()
+    await page.getByLabel('錢包名稱').fill('日本旅遊')
+    await page.getByLabel('幣別').selectOption('JPY')
+    await page.getByLabel('預算模式').selectOption('none')
+    await page.getByRole('button', { name: '建立錢包' }).click()
+    await expect(page.getByTestId('current-wallet-name')).toHaveText('日本旅遊')
+
+    await page.getByRole('link', { name: '記一筆' }).click()
+    await expect(page.getByTestId('amount-key-.')).toHaveCount(0)
+    await expect(page.getByTestId('amount-key-00')).toBeVisible()
+  })
+})

@@ -20,10 +20,22 @@ interface TransactionFormProps {
 
 type DatePreset = 'today' | 'yesterday' | 'custom'
 
-/** 把交易的最小單位金額還原成記帳頁鍵台使用的整數位字串（無小數點，見交接筆記）。 */
+/**
+ * 把交易的最小單位金額還原成記帳頁鍵台使用的字串，保留完整小數位（PR #11 review
+ * 討論後補上小數點鍵，這裡不再需要四捨五入捨去小數——編輯任何舊交易都能看到原始金額）。
+ */
 function digitsFromAmount(amount: number, currency: string): string {
-  const major = Math.round(amount / 10 ** decimalsFor(currency))
-  return major === 0 ? '' : String(major)
+  const decimals = decimalsFor(currency)
+  if (decimals === 0) {
+    return amount === 0 ? '' : String(amount)
+  }
+  const factor = 10 ** decimals
+  const major = Math.trunc(amount / factor)
+  const fraction = amount % factor
+  if (fraction === 0) {
+    return major === 0 ? '' : String(major)
+  }
+  return `${major}.${String(fraction).padStart(decimals, '0')}`
 }
 
 export default function TransactionForm({ wallet, initial }: TransactionFormProps) {
@@ -66,8 +78,9 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
   const date: IsoDate =
     datePreset === 'today' ? todayStr : datePreset === 'yesterday' ? yesterdayStr : customDate
 
-  const isZero = amountDigits === '' || /^0+$/.test(amountDigits)
+  const isZero = !/[1-9]/.test(amountDigits)
   const symbol = symbolFor(wallet.currency)
+  const maxDecimals = decimalsFor(wallet.currency)
 
   function handleTypeChange(nextType: TransactionType) {
     setType(nextType)
@@ -237,7 +250,8 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
 
       <div className="mt-auto">
         <AmountPad
-          onDigit={(digit) => setAmountDigits((current) => appendDigit(current, digit))}
+          maxDecimals={maxDecimals}
+          onDigit={(digit) => setAmountDigits((current) => appendDigit(current, digit, maxDecimals))}
           onDelete={() => setAmountDigits((current) => deleteDigit(current))}
         />
         <div className="safe-bottom px-4 pb-4 pt-3">
