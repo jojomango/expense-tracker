@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { weekRangeOf, groupByWeek, shiftIsoDate, daysBetween, type WeekStartDay } from '../../src/domain/week'
+import {
+  weekRangeOf,
+  groupByWeek,
+  shiftIsoDate,
+  daysBetween,
+  formatWeekGroupTitle,
+  type WeekStartDay,
+} from '../../src/domain/week'
 import { toIsoDate, type IsoDate } from '../../src/domain/iso-date'
 
 const d = (s: string): IsoDate => toIsoDate(s)
@@ -201,5 +208,33 @@ describe('daysBetween — 曆日差（UI 改版 Phase 8 新增）', () => {
 
   it('跨月正確', () => {
     expect(daysBetween(d('2026-08-31'), d('2026-09-06'))).toBe(6)
+  })
+})
+
+describe('T7.4 — 週分組標題文案（formatWeekGroupTitle，Phase 9 新增）', () => {
+  it('T7.4.1 — 本週的分組 → 本週 · 8/31–9/6', () => {
+    const group = { start: d('2026-08-31'), end: d('2026-09-06') }
+    expect(formatWeekGroupTitle(group, 1, new Date(2026, 8, 3, 12, 0))).toBe('本週 · 8/31–9/6')
+  })
+
+  it('T7.4.2 — 上週的分組 → 上週 · 8/24–8/30', () => {
+    const group = { start: d('2026-08-24'), end: d('2026-08-30') }
+    expect(formatWeekGroupTitle(group, 1, new Date(2026, 8, 3, 12, 0))).toBe('上週 · 8/24–8/30')
+  })
+
+  it('T7.4.3 — 更早的分組 → 只顯示日期範圍，無前綴', () => {
+    const group = { start: d('2026-08-17'), end: d('2026-08-23') }
+    expect(formatWeekGroupTitle(group, 1, new Date(2026, 8, 3, 12, 0))).toBe('8/17–8/23')
+  })
+
+  it('T7.4.4 — 跨年的本週分組不出現年份 → 本週 · 12/29–1/4', () => {
+    const group = { start: d('2025-12-29'), end: d('2026-01-04') }
+    expect(formatWeekGroupTitle(group, 1, new Date(2026, 0, 2, 12, 0))).toBe('本週 · 12/29–1/4')
+  })
+
+  it('任何情況下輸出都不得包含 YYYY-MM-DD 格式', () => {
+    const group = { start: d('2026-08-17'), end: d('2026-08-23') }
+    const title = formatWeekGroupTitle(group, 1, new Date(2026, 8, 3, 12, 0))
+    expect(title).not.toMatch(/\d{4}-\d{2}-\d{2}/)
   })
 })

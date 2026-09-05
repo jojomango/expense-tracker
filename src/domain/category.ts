@@ -87,3 +87,22 @@ export function assertCanDeleteCategory(category: Category): void {
     throw new DefaultCategoryError()
   }
 }
+
+const DEFAULT_ORDER = new Map(DEFAULT_CATEGORIES.map((c, i) => [`${c.type}:${c.name}`, i]))
+
+/**
+ * 依 `DEFAULT_CATEGORIES` 的宣告順序排序，讓分類網格（Phase 9 記帳頁）有穩定、
+ * 符合直覺的視覺順序，而不是資料庫回傳的任意順序（persistence 層的 `list()`
+ * 等同依內部主鍵排序，跟 UUID 產生順序有關，並非使用者能理解的順序）。
+ * 非預設（使用者自建）分類一律排在同 type 的預設分類之後，彼此依名稱排序。
+ */
+export function sortCategoriesForDisplay(categories: readonly Category[]): Category[] {
+  return [...categories].sort((a, b) => {
+    const orderA = DEFAULT_ORDER.get(`${a.type}:${a.name}`)
+    const orderB = DEFAULT_ORDER.get(`${b.type}:${b.name}`)
+    if (orderA !== undefined && orderB !== undefined) return orderA - orderB
+    if (orderA !== undefined) return -1
+    if (orderB !== undefined) return 1
+    return a.name.localeCompare(b.name)
+  })
+}

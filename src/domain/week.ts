@@ -5,7 +5,7 @@
  * 絕不使用本地時區的 `new Date(y, m, d)` 做加減比較，
  * 否則跨 DST 或跨時區時會產生錯誤的週界。
  */
-import { toIsoDate, compareIsoDate, type IsoDate } from './iso-date'
+import { toIsoDate, todayIso, compareIsoDate, type IsoDate } from './iso-date'
 
 export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
@@ -58,6 +58,33 @@ export function weekRangeOf(date: IsoDate, weekStartDay: WeekStartDay): WeekRang
   const startMillis = millis - daysSinceWeekStart * MS_PER_DAY
   const endMillis = startMillis + 6 * MS_PER_DAY
   return { start: utcMillisToIso(startMillis), end: utcMillisToIso(endMillis) }
+}
+
+/** `YYYY-MM-DD` → `M/D`（不補零、不含年份），供列表週分組標題使用（UI-SPEC.md §4.3）。 */
+export function formatMonthDay(date: IsoDate): string {
+  const m = ISO_DATE_RE.exec(date)
+  if (!m) {
+    throw new RangeError(`不是合法的 ISO 日期 (YYYY-MM-DD): ${date}`)
+  }
+  const [, , mo, d] = m
+  return `${Number(mo)}/${Number(d)}`
+}
+
+/**
+ * 週分組標題文案（UI-SPEC.md §4.3，TESTCASES.md T7.4）：本週／上週用人類語言標示，
+ * 更早的分組只顯示日期範圍，一律 `M/D` 格式且不含年份、不輸出 ISO 字串。
+ */
+export function formatWeekGroupTitle(
+  group: WeekRange,
+  weekStartDay: WeekStartDay,
+  referenceDate: Date,
+): string {
+  const currentWeekStart = weekRangeOf(todayIso(referenceDate), weekStartDay).start
+  const lastWeekStart = shiftIsoDate(currentWeekStart, -7)
+  const range = `${formatMonthDay(group.start)}–${formatMonthDay(group.end)}`
+  if (group.start === currentWeekStart) return `本週 · ${range}`
+  if (group.start === lastWeekStart) return `上週 · ${range}`
+  return range
 }
 
 export function groupByWeek<T>(

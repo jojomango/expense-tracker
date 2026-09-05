@@ -58,6 +58,9 @@ interface AppState {
     },
   ) => Promise<void>
   deleteTransaction: (id: string) => Promise<void>
+  /** 還原一筆剛被刪除的交易（UI-SPEC.md §4.3：左滑刪除後 toast 的「還原」鍵）。
+   * 直接把完整的原始交易物件放回去，不重新產生 id／時間戳，確保金額與分類等欄位不變。 */
+  restoreTransaction: (transaction: Transaction) => Promise<void>
 
   updateSettings: (patch: Partial<Settings>) => Promise<void>
 
@@ -191,6 +194,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   async deleteTransaction(id) {
     await repos.transactions.remove(id)
     set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }))
+  },
+
+  async restoreTransaction(transaction) {
+    await repos.transactions.add(transaction)
+    set((state) => ({ transactions: [...state.transactions, transaction] }))
   },
 
   async updateSettings(patch) {

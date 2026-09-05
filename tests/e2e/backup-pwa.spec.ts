@@ -50,10 +50,12 @@ async function createWallet(
 }
 
 async function addExpense(page: Page, amount: string) {
-  await page.getByTestId('add-transaction-button').click()
-  await page.getByLabel('金額').fill(amount)
-  await page.getByLabel('分類').selectOption({ label: '🍜 飲食' })
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('link', { name: '記一筆' }).click()
+  for (const digit of amount) {
+    await page.getByTestId(`amount-key-${digit}`).click()
+  }
+  await page.getByRole('button', { name: '🍜 飲食' }).click()
+  await page.getByRole('button', { name: '記一筆' }).click()
 }
 
 async function switchToWallet(page: Page, name: string) {
@@ -178,11 +180,11 @@ test('E2E-7 — 離線與 PWA：飛航模式下既有資料可讀取，也能正
   await expect(page.getByTestId('bottom-tab-bar')).toBeVisible()
   await expect(page.getByTestId('current-wallet-name')).toHaveText('日常')
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$2,880.00')
-  await expect(page.getByText('NT$120.00')).toBeVisible()
+  await expect(page.getByTestId('transaction-item').getByText('NT$120.00')).toBeVisible()
 
   await addExpense(page, '50')
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$2,830.00')
-  await expect(page.getByText('NT$50.00')).toBeVisible()
+  await expect(page.getByTestId('transaction-item').getByText('NT$50.00')).toBeVisible()
 
   expect(failedRequests).toEqual([])
 

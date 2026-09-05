@@ -137,17 +137,6 @@ export default function Home() {
 
       <BalanceCard />
 
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">交易紀錄</h3>
-        <Link
-          to="/transactions/new"
-          data-testid="add-transaction-button"
-          className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
-        >
-          ＋ 新增
-        </Link>
-      </div>
-
       <TransactionList
         wallet={wallet}
         transactions={walletTransactions}
