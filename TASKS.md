@@ -20,8 +20,8 @@
 | 6 | 分類與統計 | ✅ DONE | [#7](https://github.com/jojomango/expense-tracker/pull/7) |
 | 7 | PWA、備份與打磨 | ✅ DONE | [#9](https://github.com/jojomango/expense-tracker/pull/9) |
 | 8 | UI 地基與導覽 | ✅ DONE | [#10](https://github.com/jojomango/expense-tracker/pull/10) |
-| 9 | 記帳流程 | **NEXT** | |
-| 10 | 資訊呈現與分類固定色 | ⬜ TODO | |
+| 9 | 記帳流程 | ✅ DONE | [#11](https://github.com/jojomango/expense-tracker/pull/11) |
+| 10 | 資訊呈現與分類固定色 | **NEXT** | |
 
 ---
 
@@ -981,7 +981,7 @@ E2E-6／E2E-7 屬於 Phase 7）。上面列的都是「規格沒細講、或工�
 
 ---
 
-## Phase 9 — 記帳流程 **NEXT**
+## Phase 9 — 記帳流程 ✅ DONE
 
 **目標:** 讓「記一筆」從五欄網頁表單變成金額優先的流程,並讓交易列表瘦身。
 
@@ -1008,9 +1008,170 @@ E2E-6／E2E-7 屬於 Phase 7）。上面列的都是「規格沒細講、或工�
 
 分類固定色(Phase 10)—— 這個 phase 的分類色塊先用單一 `track` 底色,不要臨時發明配色。
 
+### 交接筆記(給 Phase 10 的你)
+
+**產出：**
+
+- `src/ui/amount-pad.ts`（新模組）——`appendDigit`／`deleteDigit`／`formatAmountDisplay`
+  三個純函式，涵蓋 T7.3 全部測案。**這不是 domain 層**：TESTCASES.md T7.3 本身建議
+  「放在 UI 層可測的模組」，因為它描述的是這個畫面數字鍵台的按鍵組字邏輯，不是
+  SPEC.md 的資料/業務規則，換一種輸入元件（例如系統鍵盤）就不適用。測試放在
+  `tests/ui/amount-pad.test.ts`，**不計入 domain 覆蓋率門檻**（`vitest.config.ts`
+  的 coverage.include 只收 `src/domain/**`）。
+- `src/domain/week.ts` 新增 `formatWeekGroupTitle`（本週／上週／日期範圍，T7.4）與
+  `formatMonthDay`（`YYYY-MM-DD` → `M/D`，兩者都匯出）。這個放在 **domain**，
+  跟 `money.ts` 的 `format()` 是同樣的判斷：產生人類可讀顯示文字的純函式，
+  Android 版本也會需要一模一樣的「本週/上週」判斷邏輯，不是只綁死這個 React 元件。
+- `src/domain/money.ts` 的 `groupThousands` 改為 **export**（原本是模組內部函式），
+  供 `amount-pad.ts` 的 `formatAmountDisplay` 重用千分位邏輯，避免兩份重複的 regex。
+- `src/domain/category.ts` 新增 `sortCategoriesForDisplay`——見下方「意外發現的坑」。
+- `src/app/store.ts` 新增 `restoreTransaction(transaction)`：直接把完整的交易物件
+  存回去，**不重新產生 `id`／`createdAt`／`updatedAt`**。這是左滑刪除→toast「還原」
+  這個互動模式的核心：`TransactionList` 在使用者按下刪除鍵時，先把完整的
+  `Transaction` 物件存在 closure 裡才呼叫 `deleteTransaction`，「還原」時把同一個
+  物件原封不動丟回 `restoreTransaction`，所以金額、分類、原始建立時間都不會變
+  （比呼叫 `addTransaction` 重新產生欄位更貼近「復原」的語意）。
+- `src/ui/AmountPad.tsx`、`src/ui/CategoryGrid.tsx`（新元件，見 UI-SPEC.md §5）。
+- `src/ui/TransactionForm.tsx` 整個重寫：金額用 `amountDigits: string` 狀態
+  （鍵台按鍵組出來的整數位字串）取代原本的自由文字輸入；分類用 `CategoryGrid`；
+  日期用「今天／昨天／選日期」三個 pill + 選日期時才出現的
+  `data-testid="transaction-date-input"` 原生 date input；主鍵金額為 0 時 disabled。
+- `src/ui/TransactionList.tsx` 整個重寫：`TransactionRow` 子元件自己管理左滑手勢
+  （Pointer Events，`pointerdown`/`pointermove`/`pointerup`，見下方「左滑刪除的實作
+  方式」），刪除鍵（`data-testid="transaction-delete-action"`）**只在展開或拖曳中才
+  渲染**，靜止時完全不在 DOM 裡——這是刻意的設計，直接滿足 T8.2.1「列表列的 DOM
+  不含文字為「編輯」或「刪除」的元素」，不需要額外的 DOM 範圍技巧。
+- `src/ui/Home.tsx` 移除了「交易紀錄」標題列與「＋ 新增」按鈕——記一筆的唯一入口
+  現在是底部分頁列中央的 FAB（Phase 8 就做好的 `aria-label="記一筆"` 連結）。
+- 新增 `tests/e2e/transaction-flow.spec.ts`：T8.1.1～T8.1.7、T8.2.1～T8.2.8，
+  共 15 個測試，測試名稱以測案編號開頭。
+
+**金額輸入精度（PR #11 review 討論後已解決）：**
+
+Phase 9 剛送出 PR 時，鍵台只有 `1 2 3 / 4 5 6 / 7 8 9 / 00 0 ⌫`，沒有小數點鍵，
+記帳頁只能輸入整數金額，編輯舊有帶小數的交易時金額會被就地四捨五入——這件事
+當時寫進 PR 描述的「需要人類決策」，人類（repo owner）在 PR review 討論後決定：
+
+1. **鍵台補回小數點鍵**——`UI-SPEC.md` §5 已改成:幣別小數位數 > 0 時鍵序是
+   `1 2 3 / 4 5 6 / 7 8 9 / . 0 ⌫`;小數位數為 0（JPY/KRW/VND）時維持原本的
+   `00`,小數點鍵直接不出現（不是出現後停用）。
+2. **`dailyAllowance`（Phase 8 的日均可用額）維持向下取整,不改**——人類一度考慮
+   「0 小數位幣別要不要無條件進位」,討論後確認那其實是在想「外幣結算成台幣」
+   的情境,但 `SPEC.md` §4 明確排除「跨錢包幣別換算」是 v1 非目標,目前完全沒有
+   會產生這種待進位金額的計算式,所以沒有東西要改。**`TESTCASES.md` T7.2.5
+   （1000 JPY ÷ 3 天 → 333 JPY,向下取整）維持不變，不需要修改契約。**
+
+**實作方式：**
+
+- `src/ui/amount-pad.ts` 的 `appendDigit` 新增第三個參數 `maxDecimals`（**預設值
+  0**，讓 `TESTCASES.md` T7.3 原本只傳兩個參數的測案完全不受影響、行為不變）。
+  按 `.` 鍵時：`maxDecimals <= 0` 或字串裡已經有 `.` 就不做任何事；空字串按 `.`
+  變成 `'0.'`。小數位數的上限（`maxDecimals`）跟整數位上限（`MAX_AMOUNT_DIGITS`
+  = 8）分開計算、互不影響。`formatAmountDisplay` 也改了：千分位只套用在小數點
+  以前的整數位，小數位原封不動顯示（`1234.5` → `NT$1,234.5`）。
+- `src/ui/AmountPad.tsx` 新增必填的 `maxDecimals` prop，鍵台左下角那一格依
+  `maxDecimals > 0 ? '.' : '00'` 動態決定內容——**同一個位置換內容，不是多長出
+  一顆鍵**，維持 3×4＝12 鍵的網格不變。
+  `TransactionForm.tsx` 傳入 `decimalsFor(wallet.currency)`。
+- **`digitsFromAmount`（編輯交易時把最小單位金額還原成鍵台字串）已經改成保留
+  完整小數**，不再用 `Math.round` 捨去：`decimals === 0` 的幣別直接回傳整數字串；
+  有小數的幣別算出整數部分與小數部分，小數部分用 `padStart(decimals, '0')`
+  補滿位數（例如 TWD 12050 分 → `'120.50'`，不再變成 `'121'`）。**PR 描述裡原本
+  記錄的「編輯舊資料會四捨五入」問題已經徹底解決，不是規避，是真的修好了。**
+- `isZero` 判斷改成 `!/[1-9]/.test(amountDigits)`（有沒有出現非零數字），
+  取代原本的 `=== '' || /^0+$/`——原本的寫法遇到 `'0.5'` 這種字串會誤判成
+  非零（因為正則只認得純 `0` 開頭），改成「找有沒有 1-9 的數字」更直接也更對。
+- 新增的測試都是描述性名稱、非 TESTCASES.md 契約項目（`tests/ui/amount-pad.test.ts`
+  的「小數點處理」區塊、`tests/e2e/transaction-flow.spec.ts` 的「金額鍵台的小數點鍵」
+  區塊），T7.3 既有 7 個測案原封不動、全部通過。
+
+**左滑刪除的實作方式：**
+
+`TransactionRow`（`TransactionList.tsx` 內部元件）用原生 Pointer Events 手刻，
+沒有引入任何手勢函式庫：
+
+- `pointerdown` 記錄起點 X 座標與目前的「靜止位移」（展開態 -88，收合態 0）
+- `pointermove` 用起點位移 + 拖曳距離，clamp 在 `[-96, 0]`（`DRAG_CLAMP`／`0`）
+- `pointerup` 判斷這次手勢是「點擊」還是「拖曳」：位移 < 5px（`TAP_THRESHOLD`）
+  視為點擊——若原本是展開態就收合，否則導向編輯頁；位移 ≥ 5px 才走「該不該停在
+  展開態」的判斷（`finalOffset <= -44` 即 `OPEN_THRESHOLD` 才展開，否則收合）
+- 「同時只有一列展開」是父層 `TransactionList` 用單一 `openId: string | null`
+  state 控制，`onOpenChange(true)` 時直接覆蓋掉舊的 `openId`（不需要額外通知舊列
+  收合，因為它的 `isOpen` prop 這一輪 render 就會自動變成 `false`）
+- 刪除鍵**只在 `offset < -1` 時才 render**（不是用 `visibility`/`opacity` 隱藏），
+  這連帶滿足了 T8.2.1（見上方「產出」）跟 T8.2.4（放開後刪除鍵「不可見」，
+  用 `toHaveCount(0)` 而不是 `not.toBeVisible()` 驗證更嚴謹）
+
+Playwright 測試裡用 `page.mouse.down()/move()/up()` 模擬拖曳——Chromium 的滑鼠操作
+會真的觸發瀏覽器原生的 Pointer Events（`pointerType: 'mouse'`），跟真正的觸控手勢
+走同一套事件，不需要額外的測試專用 hook。
+
+**意外發現的坑：分類顯示順序不穩定（已在這個 phase 順手修掉）**
+
+寫 `CategoryGrid` 時發現：`categories` 陣列（來自 `repos.categories.list()`，
+Dexie 的 `toCollection().toArray()`）的順序等同資料庫內部主鍵（`id`，隨機 UUID）
+順序，跟 `DEFAULT_CATEGORIES` 宣告的順序（飲食、交通、居住…）完全無關。
+用 `<select>` 時使用者用文字掃描找分類，順序亂一點不明顯；換成**空間網格**後，
+使用者要靠「飲食通常在左上角」這種空間記憶操作，順序每次「首次啟動重新 seed」
+都不一樣會很糟。這不是 TESTCASES.md 要求的行為，但因為它直接影響這個 phase
+新寫的 `CategoryGrid` 好不好用，我判斷屬於「這個 phase 該順手做好」的範圍，
+新增了 `src/domain/category.ts` 的 `sortCategoriesForDisplay`（依
+`DEFAULT_CATEGORIES` 宣告順序排列預設分類，使用者自建分類依名稱排在後面），
+`CategoryGrid.tsx` 與 `TransactionForm.tsx`（分類網格本身、預設選取的分類、
+切換支出/收入時的預設分類）都套用了這個排序。**`Categories.tsx`（分類管理頁的
+清單）沒有套用**——那個頁面本來就是文字列表，不是空間網格，順序穩定性的急迫性
+低很多，且改動管理頁不在這個 phase 範圍內，留給之後有需要再處理。
+
+**其他設計決策：**
+
+- **toast「已記錄 {分類} {金額}」的金額用 `formatAmountDisplay`（鍵台顯示的原始
+  字串 + 符號），不是 `money.format()`。** TESTCASES.md T8.1.4 明確寫「已記錄
+  飲食 NT$180」（沒有 `.00`），跟金額卡片/列表用的 `money.format()`（永遠帶
+  完整小數位）不同格式，兩者刻意分開，不要在之後的 phase 誤把 toast 改成
+  `money.format()` 又生出 `.00`。
+- **「取消」按鈕與送出成功都 `navigate('/')`**，不管是新增還是編輯。UI-SPEC.md
+  §5 沒有另外規定編輯模式取消/送出後要回哪裡，記帳頁唯一的入口本來就是首頁的
+  FAB 或列表列點擊，回首頁最單純。
+- **日期 pill 的「選日期」與 `todayIso`/`yesterdayStr` 是用元件掛載當下的
+  `new Date()` 算的（不是每次 render 重算）**——這是 UI 層，`new Date()` 在
+  `src/ui/` 允許（CLAUDE.md 的「時間當參數注入」是 domain 層的規則），跟
+  `Home.tsx` 的 `BalanceCard` 一直以來的做法一致。
+- **週分組小計（`groupSubtotalText`）是這個 phase 主動加的**——UI-SPEC.md §4.3
+  的組標題行本來就畫了小計數字，不是我自己加的功能，只是提醒下一個 phase：
+  小計是「支出減收入的淨額」，符號依淨額正負決定（全部支出時顯示負號，
+  淨收入時顯示正號），這個規則沒有寫進 TESTCASES.md，是我看 UI-SPEC.md 範例
+  `-NT$4,080` 反推的設計，如果人類覺得語意不對（例如應該分開顯示收入/支出
+  小計）可以再調，不需要动 domain 層。
+- **編輯交易的日期 preset 判斷**（`initialPreset`）：如果原交易日期等於今天→
+  預設選「今天」；等於昨天→「昨天」；其他→「選日期」並帶出該日期。這是我補的
+  合理判斷（TESTCASES 沒要求），避免使用者編輯一筆上週的交易時，畫面誤導性地
+  顯示「今天」被選取。
+
+**已知但不影響本 phase 驗收的坑（留給 Phase 10 或之後注意）：**
+
+- `CategoryGrid` 的選取態視覺是 `box-shadow: 0 0 0 2.5px var(--color-accent)`
+  （accent 外框），**不是**分類固定色——這個 phase 的「刻意不做」清單就講了，
+  Phase 10 要把分類固定色接上時，`Category` 型別加了 `color` 欄位之後，
+  `CategoryGrid.tsx` 目前寫死的 `bg-track`（第 33 行附近）跟
+  `TransactionList.tsx` 的分類色塊（也是 `bg-track`，`TransactionRow` 裡
+  38×38 那個 `<span>`）都要一起換成 `category.color` 的 tint 底色，
+  選取態的外框顏色（目前是固定的 `accent`）**要不要也跟著換成分類色**，
+  `UI-SPEC.md` §5 原文寫的是「`box-shadow: 0 0 0 2.5px {分類色}`」——沒錯,
+  Phase 9 這裡用固定 `accent` 是暫時簡化，Phase 10 應該把它換成分類色本身。
+- **群組小計沒有任何測案覆蓋**（見上方設計決策），Phase 10 動 `Stats.tsx`／
+  `TransactionList.tsx` 時如果連帶調整小計邏輯，記得這條規則目前只是我的推測，
+  不是鎖死的契約。
+- 本機沙盒 Playwright executable 版本落差的 workaround（`playwright.local.config.ts`，
+  未提交）這次也用到了，作法與先前 phase 交接筆記描述的完全相同，沒有新坑。
+
+**沒有需要人類決策的「規格矛盾」事項**——`UI-SPEC.md`／`TESTCASES.md` 本身沒有矛盾。
+金額輸入精度那項原本是 PR #11 的「需要人類決策」，已在 review 討論中由人類決定
+（見上方「金額輸入精度」段落），`UI-SPEC.md` 的修改是人類明確授權後才動的，
+不是 agent 自作主張；`TESTCASES.md` 這次完全沒有修改。
+
 ---
 
-## Phase 10 — 資訊呈現與分類固定色 ⬜ TODO
+## Phase 10 — 資訊呈現與分類固定色 **NEXT**
 
 **目標:** 預算卡與圖表補上脈絡,分類色綁到分類本身。**這個 phase 有 schema 變更。**
 

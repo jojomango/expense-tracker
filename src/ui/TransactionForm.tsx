@@ -1,16 +1,41 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../app/store'
 import type { Transaction, TransactionType } from '../domain/transaction'
 import { parse } from '../domain/money'
-import { decimalsFor } from '../domain/currency'
-import { todayIso, toIsoDate, type IsoDate } from '../domain/iso-date'
+import { decimalsFor, symbolFor } from '../domain/currency'
+import { todayIso, toIsoDate, compareIsoDate, type IsoDate } from '../domain/iso-date'
+import { shiftIsoDate } from '../domain/week'
 import type { Wallet } from '../domain/wallet'
-import BackLink from './BackLink'
+import { sortCategoriesForDisplay } from '../domain/category'
+import { appendDigit, deleteDigit, formatAmountDisplay } from './amount-pad'
+import AmountPad from './AmountPad'
+import CategoryGrid from './CategoryGrid'
+import { showToast } from './Toast'
 
 interface TransactionFormProps {
   wallet: Wallet
   initial?: Transaction
+}
+
+type DatePreset = 'today' | 'yesterday' | 'custom'
+
+/**
+ * 把交易的最小單位金額還原成記帳頁鍵台使用的字串，保留完整小數位（PR #11 review
+ * 討論後補上小數點鍵，這裡不再需要四捨五入捨去小數——編輯任何舊交易都能看到原始金額）。
+ */
+function digitsFromAmount(amount: number, currency: string): string {
+  const decimals = decimalsFor(currency)
+  if (decimals === 0) {
+    return amount === 0 ? '' : String(amount)
+  }
+  const factor = 10 ** decimals
+  const major = Math.trunc(amount / factor)
+  const fraction = amount % factor
+  if (fraction === 0) {
+    return major === 0 ? '' : String(major)
+  }
+  return `${major}.${String(fraction).padStart(decimals, '0')}`
 }
 
 export default function TransactionForm({ wallet, initial }: TransactionFormProps) {
@@ -19,34 +44,62 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
   const addTransaction = useAppStore((s) => s.addTransaction)
   const updateTransaction = useAppStore((s) => s.updateTransaction)
 
+  const now = new Date()
+  const todayStr = todayIso(now)
+  const yesterdayStr = shiftIsoDate(todayStr, -1)
+
   const [type, setType] = useState<TransactionType>(initial?.type ?? 'expense')
   const optionsForType = useMemo(
-    () => categories.filter((c) => c.type === type),
+    () => sortCategoriesForDisplay(categories.filter((c) => c.type === type)),
     [categories, type],
   )
 
-  const [amountInput, setAmountInput] = useState(
-    initial ? String(initial.amount / 10 ** decimalsFor(wallet.currency)) : '',
+  const [amountDigits, setAmountDigits] = useState(
+    initial ? digitsFromAmount(initial.amount, wallet.currency) : '',
   )
   const [categoryId, setCategoryId] = useState<string>(
     initial?.categoryId ?? optionsForType[0]?.id ?? '',
   )
-  const [date, setDate] = useState<IsoDate>(initial?.date ?? todayIso(new Date()))
+
+  const initialPreset: DatePreset =
+    initial === undefined || initial.date === todayStr
+      ? 'today'
+      : initial.date === yesterdayStr
+        ? 'yesterday'
+        : 'custom'
+  const [datePreset, setDatePreset] = useState<DatePreset>(initialPreset)
+  const [customDate, setCustomDate] = useState<IsoDate>(initial?.date ?? todayStr)
+
+  const [noteOpen, setNoteOpen] = useState(Boolean(initial?.note))
   const [note, setNote] = useState(initial?.note ?? '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const date: IsoDate =
+    datePreset === 'today' ? todayStr : datePreset === 'yesterday' ? yesterdayStr : customDate
+
+  const isZero = !/[1-9]/.test(amountDigits)
+  const symbol = symbolFor(wallet.currency)
+  const maxDecimals = decimalsFor(wallet.currency)
+
   function handleTypeChange(nextType: TransactionType) {
     setType(nextType)
-    const firstOfType = categories.find((c) => c.type === nextType)
+    const firstOfType = sortCategoriesForDisplay(categories.filter((c) => c.type === nextType))[0]
     setCategoryId(firstOfType?.id ?? '')
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  function handleDateInputChange(e: ChangeEvent<HTMLInputElement>) {
+    if (!e.target.value) return
+    const next = toIsoDate(e.target.value)
+    setCustomDate(next)
+    setDatePreset(compareIsoDate(next, todayStr) === 0 ? 'today' : 'custom')
+  }
+
+  async function handleSubmit() {
+    if (isZero || submitting) return
     setError(null)
     try {
-      const amount = parse(amountInput, wallet.currency).amount
+      const amount = parse(amountDigits, wallet.currency).amount
       const noteField = note ? { note } : {}
       setSubmitting(true)
       if (initial) {
@@ -66,6 +119,8 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
           date,
           ...noteField,
         })
+        const category = categories.find((c) => c.id === categoryId)
+        showToast(`已記錄 ${category?.name ?? '未分類'} ${formatAmountDisplay(amountDigits, symbol)}`)
       }
       navigate('/')
     } catch (err) {
@@ -76,100 +131,141 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-sm space-y-4 p-6">
-      <BackLink to="/" label="取消" />
-      <h1 className="text-xl font-semibold">{initial ? '編輯交易' : '新增交易'}</h1>
+    <div className="mx-auto flex min-h-dvh max-w-sm flex-col">
+      <div className="safe-top flex items-center justify-between px-5 pt-4">
+        <button type="button" onClick={() => navigate('/')} className="text-[16px] text-fg2">
+          取消
+        </button>
+        <div className="flex rounded-[9px] bg-track p-[2px]">
+          <button
+            type="button"
+            data-testid="type-expense"
+            onClick={() => handleTypeChange('expense')}
+            className={`rounded-[7px] px-4 py-1.5 text-body ${
+              type === 'expense' ? 'bg-card text-fg shadow-[0_1px_3px_rgba(0,0,0,0.16)]' : 'text-fg2'
+            }`}
+          >
+            支出
+          </button>
+          <button
+            type="button"
+            data-testid="type-income"
+            onClick={() => handleTypeChange('income')}
+            className={`rounded-[7px] px-4 py-1.5 text-body ${
+              type === 'income' ? 'bg-card text-fg shadow-[0_1px_3px_rgba(0,0,0,0.16)]' : 'text-fg2'
+            }`}
+          >
+            收入
+          </button>
+        </div>
+        <span className="w-8" aria-hidden="true" />
+      </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          data-testid="type-expense"
-          onClick={() => handleTypeChange('expense')}
-          className={`flex-1 rounded px-3 py-2 ${
-            type === 'expense' ? 'bg-slate-900 text-white' : 'bg-slate-100'
+      <div className="flex flex-col items-center gap-1 px-5 pb-5 pt-6">
+        <p className="text-[12px] tracking-[0.04em] text-fg2">
+          {wallet.name} · {wallet.currency}
+        </p>
+        <p
+          data-testid="amount-display"
+          className={`text-amount-input tabular-nums ${
+            isZero ? 'text-fg3' : type === 'income' ? 'text-income' : 'text-fg'
           }`}
         >
-          支出
+          {formatAmountDisplay(amountDigits, symbol)}
+        </p>
+      </div>
+
+      <div className="px-5">
+        <CategoryGrid
+          categories={categories}
+          type={type}
+          selectedId={categoryId}
+          onSelect={setCategoryId}
+        />
+      </div>
+
+      <div className="flex items-center gap-2 px-5 py-4">
+        <button
+          type="button"
+          onClick={() => setDatePreset('today')}
+          className={`rounded-pill px-3 py-1.5 text-caption ${
+            datePreset === 'today' ? 'bg-accent text-white' : 'bg-track text-fg2'
+          }`}
+        >
+          今天
         </button>
         <button
           type="button"
-          data-testid="type-income"
-          onClick={() => handleTypeChange('income')}
-          className={`flex-1 rounded px-3 py-2 ${
-            type === 'income' ? 'bg-slate-900 text-white' : 'bg-slate-100'
+          onClick={() => setDatePreset('yesterday')}
+          className={`rounded-pill px-3 py-1.5 text-caption ${
+            datePreset === 'yesterday' ? 'bg-accent text-white' : 'bg-track text-fg2'
           }`}
         >
-          收入
+          昨天
         </button>
-      </div>
-
-      <div>
-        <label htmlFor="transaction-amount" className="block text-sm font-medium">
-          金額
-        </label>
-        <input
-          id="transaction-amount"
-          inputMode="decimal"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
-          value={amountInput}
-          onChange={(e) => setAmountInput(e.target.value)}
-          required
-        />
-      </div>
-
-      <div>
-        <label htmlFor="transaction-category" className="block text-sm font-medium">
-          分類
-        </label>
-        <select
-          id="transaction-category"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
+        <button
+          type="button"
+          onClick={() => setDatePreset('custom')}
+          className={`rounded-pill px-3 py-1.5 text-caption ${
+            datePreset === 'custom' ? 'bg-accent text-white' : 'bg-track text-fg2'
+          }`}
         >
-          {optionsForType.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-            </option>
-          ))}
-        </select>
+          選日期
+        </button>
+        {datePreset === 'custom' && (
+          <input
+            type="date"
+            aria-label="選擇日期"
+            data-testid="transaction-date-input"
+            value={customDate}
+            onChange={handleDateInputChange}
+            className="rounded-pill bg-track px-2 py-1 text-caption text-fg2"
+          />
+        )}
+        <span className="flex-1" />
+        {noteOpen ? (
+          <input
+            type="text"
+            aria-label="備註"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-24 rounded-pill bg-track px-3 py-1.5 text-caption text-fg"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setNoteOpen(true)}
+            className="rounded-pill bg-track px-3 py-1.5 text-caption text-fg2"
+          >
+            ＋ 備註
+          </button>
+        )}
       </div>
 
-      <div>
-        <label htmlFor="transaction-date" className="block text-sm font-medium">
-          日期
-        </label>
-        <input
-          id="transaction-date"
-          type="date"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
-          value={date}
-          onChange={(e) => setDate(toIsoDate(e.target.value))}
-          required
+      {error && (
+        <p role="alert" className="px-5 text-caption text-danger">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-auto">
+        <AmountPad
+          maxDecimals={maxDecimals}
+          onDigit={(digit) => setAmountDigits((current) => appendDigit(current, digit, maxDecimals))}
+          onDelete={() => setAmountDigits((current) => deleteDigit(current))}
         />
+        <div className="safe-bottom px-4 pb-4 pt-3">
+          <button
+            type="button"
+            data-testid="submit-transaction"
+            disabled={isZero || submitting}
+            onClick={() => void handleSubmit()}
+            className="w-full rounded-[14px] bg-accent px-4 py-[15px] text-[17px] font-semibold text-white disabled:opacity-40"
+          >
+            {initial ? '儲存' : '記一筆'}
+          </button>
+        </div>
       </div>
-
-      <div>
-        <label htmlFor="transaction-note" className="block text-sm font-medium">
-          備註
-        </label>
-        <input
-          id="transaction-note"
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-      >
-        送出
-      </button>
-    </form>
+    </div>
   )
 }

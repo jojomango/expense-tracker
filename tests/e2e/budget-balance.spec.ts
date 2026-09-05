@@ -3,6 +3,10 @@ import { test, expect, type Page } from '@playwright/test'
 /**
  * TESTCASES.md E2E-3、E2E-4、E2E-5。
  * 每個測試從乾淨的 IndexedDB 開始（Playwright 預設每個測試獨立瀏覽器 context）。
+ *
+ * Phase 9 起記一筆改為 FAB + 數字鍵台 + 分類網格（見 wallet-transaction-crud.spec.ts
+ * 開頭註解），這裡的 addExpense 助手同步更新；日期改用「選日期」pill 展開的原生
+ * date input（`transaction-date-input`）。
  */
 
 async function createFirstWallet(page: Page, budgetAmount = '3000') {
@@ -19,13 +23,16 @@ async function createFirstWallet(page: Page, budgetAmount = '3000') {
 }
 
 async function addExpense(page: Page, amount: string, date?: string) {
-  await page.getByTestId('add-transaction-button').click()
-  await page.getByLabel('金額').fill(amount)
-  await page.getByLabel('分類').selectOption({ label: '🍜 飲食' })
-  if (date) {
-    await page.getByLabel('日期').fill(date)
+  await page.getByRole('link', { name: '記一筆' }).click()
+  for (const digit of amount) {
+    await page.getByTestId(`amount-key-${digit}`).click()
   }
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: '🍜 飲食' }).click()
+  if (date) {
+    await page.getByRole('button', { name: '選日期' }).click()
+    await page.getByTestId('transaction-date-input').fill(date)
+  }
+  await page.getByRole('button', { name: '記一筆' }).click()
 }
 
 /** Phase 8 起「管理錢包」入口移進了錢包切換 sheet（點錢包名稱開啟）。 */
@@ -69,7 +76,7 @@ test('E2E-4 — 多錢包與多幣別：餘額互不影響', async ({ page }) =>
   await goHome(page)
   await expect(page.getByTestId('current-wallet-name')).toHaveText('日本旅遊')
   await expect(page.getByTestId('total-balance')).toHaveText('¥200,000')
-  await expect(page.getByText('本錢包還沒有任何交易')).toBeVisible()
+  await expect(page.getByText('這個錢包還沒有交易')).toBeVisible()
 
   await addExpense(page, '8000')
   await expect(page.getByTestId('total-balance')).toHaveText('¥192,000')
@@ -104,10 +111,11 @@ test('E2E-5 — 週起始日設定：變更即時重算週餘額與分組', asyn
   await goHome(page)
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$1,500.00')
 
+  // weekStartDay 改為週日後，8/9（日）與 8/10（一）同屬今天（8/11）所在的那一週，
+  // 只會有 1 個分組；標題文案不得出現 ISO 日期（TESTCASES.md T7.4／T8.2.8）。
   const headers = page.getByTestId('week-group-header')
   await expect(headers).toHaveCount(1)
-  await expect(headers.first()).toContainText('2026-08-09')
-  await expect(headers.first()).toContainText('2026-08-15')
+  await expect(headers.first()).toHaveText('本週 · 8/9–8/15')
 
   await expect(page.getByText('NT$1,000.00')).toBeVisible()
   await expect(page.getByText('NT$500.00')).toBeVisible()

@@ -22,13 +22,16 @@ async function createFirstWallet(page: Page) {
 }
 
 async function addExpense(page: Page, amount: string, categoryLabel: string, date?: string) {
-  await page.getByTestId('add-transaction-button').click()
-  await page.getByLabel('金額').fill(amount)
-  await page.getByLabel('分類').selectOption({ label: categoryLabel })
-  if (date) {
-    await page.getByLabel('日期').fill(date)
+  await page.getByRole('link', { name: '記一筆' }).click()
+  for (const digit of amount) {
+    await page.getByTestId(`amount-key-${digit}`).click()
   }
-  await page.getByRole('button', { name: '送出' }).click()
+  await page.getByRole('button', { name: categoryLabel }).click()
+  if (date) {
+    await page.getByRole('button', { name: '選日期' }).click()
+    await page.getByTestId('transaction-date-input').fill(date)
+  }
+  await page.getByRole('button', { name: '記一筆' }).click()
 }
 
 /** Phase 8 起「分類管理」入口移進了設定頁（見 Settings.tsx 的「分類管理」列）。 */
@@ -80,7 +83,7 @@ test('E2E-9 — 分類管理：刪除有交易的自訂分類時，交易轉移�
   await addExpense(page, '100', '☕ 咖啡')
 
   const item = page.getByTestId('transaction-item').first()
-  await expect(item).toContainText('☕ 咖啡')
+  await expect(item).toContainText('咖啡')
 
   await goToCategories(page)
   await page.getByTestId('category-item').filter({ hasText: '咖啡' }).getByTestId('delete-category').click()

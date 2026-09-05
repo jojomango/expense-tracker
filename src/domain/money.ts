@@ -33,8 +33,8 @@ function assertSameCurrency(a: Money, b: Money): void {
   }
 }
 
-/** 把千位數以逗號分隔，只作用於整數字串。 */
-function groupThousands(digits: string): string {
+/** 把千位數以逗號分隔，只作用於整數字串。UI 層（記帳頁即時千分位）也直接重用這個函式。 */
+export function groupThousands(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
