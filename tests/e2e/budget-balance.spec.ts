@@ -117,6 +117,6 @@ test('E2E-5 — 週起始日設定：變更即時重算週餘額與分組', asyn
   await expect(headers).toHaveCount(1)
   await expect(headers.first()).toHaveText('本週 · 8/9–8/15')
 
-  await expect(page.getByText('NT$1,000.00')).toBeVisible()
-  await expect(page.getByText('NT$500.00')).toBeVisible()
+  await expect(page.getByTestId('transaction-item').getByText('NT$1,000.00')).toBeVisible()
+  await expect(page.getByTestId('transaction-item').getByText('NT$500.00')).toBeVisible()
 })

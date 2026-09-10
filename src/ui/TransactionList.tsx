@@ -6,7 +6,14 @@ import type { Category } from '../domain/category'
 import type { Wallet } from '../domain/wallet'
 import { Money, format } from '../domain/money'
 import { compareIsoDate } from '../domain/iso-date'
-import { groupByWeek, formatWeekGroupTitle, formatMonthDay, type WeekStartDay } from '../domain/week'
+import {
+  groupByWeek,
+  groupByDay,
+  formatWeekGroupTitle,
+  formatMonthDay,
+  weekdayLabel,
+  type WeekStartDay,
+} from '../domain/week'
 import { showToast } from './Toast'
 
 interface TransactionListProps {
@@ -106,8 +113,6 @@ function TransactionRow({
     onOpenChange(finalOffset <= OPEN_THRESHOLD)
   }
 
-  const subtitle = transaction.note ? `${formatMonthDay(transaction.date)} · ${transaction.note}` : formatMonthDay(transaction.date)
-
   return (
     <li
       data-testid="transaction-row"
@@ -144,7 +149,10 @@ function TransactionRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-row-title text-fg">{name}</span>
-          <span className="block truncate text-caption text-fg2">{subtitle}</span>
+          {/* 日期已經由外層的「日」分組標題顯示，這裡只剩備註（沒有備註就不佔一行）。 */}
+          {transaction.note && (
+            <span className="block truncate text-caption text-fg2">{transaction.note}</span>
+          )}
         </span>
         <span
           className={`shrink-0 text-row-amount tabular-nums ${
@@ -211,20 +219,37 @@ export default function TransactionList({
               {groupSubtotalText(group.items, wallet.currency)}
             </span>
           </div>
-          <ul className="overflow-hidden rounded-group bg-card shadow-card">
-            {sortNewestFirst(group.items).map((t, index) => (
-              <TransactionRow
-                key={t.id}
-                transaction={t}
-                wallet={wallet}
-                categories={categories}
-                isOpen={openId === t.id}
-                bordered={index > 0}
-                onOpenChange={(open) => setOpenId(open ? t.id : null)}
-                onDeleteRequested={(tx) => void handleDeleteRequested(tx)}
-              />
+          <div className="space-y-3">
+            {groupByDay(group.items, (t) => t.date).map((day) => (
+              <div key={day.date}>
+                <div className="mb-1.5 flex items-baseline justify-between px-1">
+                  <span data-testid="day-group-header" className="text-caption text-fg2">
+                    {formatMonthDay(day.date)} · {weekdayLabel(day.date)}
+                  </span>
+                  <span
+                    data-testid="day-group-subtotal"
+                    className="text-caption font-semibold tabular-nums text-fg"
+                  >
+                    {groupSubtotalText(day.items, wallet.currency)}
+                  </span>
+                </div>
+                <ul className="overflow-hidden rounded-group bg-card shadow-card">
+                  {sortNewestFirst(day.items).map((t, index) => (
+                    <TransactionRow
+                      key={t.id}
+                      transaction={t}
+                      wallet={wallet}
+                      categories={categories}
+                      isOpen={openId === t.id}
+                      bordered={index > 0}
+                      onOpenChange={(open) => setOpenId(open ? t.id : null)}
+                      onDeleteRequested={(tx) => void handleDeleteRequested(tx)}
+                    />
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       ))}
     </div>
