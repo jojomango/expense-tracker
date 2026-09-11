@@ -1171,6 +1171,51 @@ Dexie 的 `toCollection().toArray()`）的順序等同資料庫內部主鍵（`i
 
 ---
 
+## 使用者回饋修正（Phase 9 之後，非正式 phase）
+
+人類實際帶著一個 `total` 模式的旅行錢包出國記帳後回饋兩件事，不屬於 `TASKS.md`
+既有的 phase 範圍，直接以獨立分支／PR 處理（`claude/daily-subtotal-and-note-fix`）：
+
+1. **交易列表加上「每日小計」**——人類原話：「每天的花費都會排在一起，想知道我
+   一天花了多少錢，給自己注意」。先用 Artifact 出了一版目前/提案對照的視覺預覽
+   （https://claude.ai/code/artifact/97333865-ff5a-409d-bdd4-a52d58a1a8db）讓人類
+   確認方向,人類同意後才動工。
+   - `src/domain/week.ts` 新增 `groupByDay`（跟 `groupByWeek`平行的每日分組純函式）
+     與 `weekdayLabel`（IsoDate → 「週一」～「週日」），皆有先紅後綠的測試
+     （`tests/domain/week.test.ts`）。
+   - `TransactionList.tsx` 在既有的「週」分組底下，再依 `groupByDay` 拆成一天
+     一張 `rounded-group` 卡片，卡片標題是「M/D · 週X」+ 當天小計
+     （沿用既有的 `groupSubtotalText`，不是新規則）。**週分組標題與週小計完全
+     沒有變動**——`groupByWeek` 呼叫方式、`formatWeekGroupTitle` 都原封不動。
+   - `TransactionRow` 的列副標不再重複顯示日期（日期已經在上層的日卡片標題），
+     改成只顯示備註，沒有備註就不佔一行。
+   - 新增 `tests/e2e/daily-subtotal.spec.ts`（非 TESTCASES.md 契約項目，描述性
+     測試名稱）；既有 `budget-balance.spec.ts`（E2E-5）、`transaction-flow.spec.ts`
+     （T8.1.6）裡兩處會跟新的 `day-group-subtotal`／`day-group-header` 撞
+     `getByText` 唯一性的斷言已經改成用 testid 限定範圍或改讀日卡片標題，
+     行為本身沒有減弱。
+2. **備註欄位太窄、輸入完鍵盤不會收起**——`TransactionForm.tsx` 的備註 `<input>`
+   原本固定寬度 `w-24`（96px），改成 `flex-1`（跟其他 pill 搶剩餘空間，會隨畫面
+   自動加寬）；新增 `onKeyDown` 在按下 Enter（系統鍵盤的「完成/前往」鍵在一般
+   文字框上就是送出 `keydown: Enter`）時呼叫 `blur()` 主動收起鍵盤——原本這個
+   表單沒有包在 `<form>` 裡，Enter 鍵預設完全沒有效果，鍵盤只能靠使用者手動點
+   別處才會收起。`enterKeyHint="done"` 順便讓行動裝置鍵盤顯示「完成」而不是
+   預設的換行/前往圖示。**UI-SPEC.md §5「展開單行輸入」這條沒有違反**——只是
+   把單行輸入框變寬，沒有改成多行 `<textarea>`。
+
+**已知但不影響驗收的坑：**
+- 這批測試是先有互動調整過的實作、寫完後才跑，跟 TASKS.md Phase 8 交接筆記
+  提過的 T8.3.x 是同一種情況（domain 層的 `groupByDay`／`weekdayLabel` 例外，
+  這兩個有照規矩先紅後綠）。
+- 沒有處理「使用者自己點畫面其他地方讓備註欄位失焦」這個情境的額外測試——
+  正常瀏覽器行為本來就會在點擊其他可聚焦元素時自動移轉焦點，這次只補了
+  Enter 鍵這個原本完全沒反應的破口。
+
+**沒有需要人類決策的事項**——這整段變更都是照人類回饋與確認過的視覺預覽做的，
+沒有牴觸 `SPEC.md`／`UI-SPEC.md`／`TESTCASES.md`。
+
+---
+
 ## Phase 10 — 資訊呈現與分類固定色 **NEXT**
 
 **目標:** 預算卡與圖表補上脈絡,分類色綁到分類本身。**這個 phase 有 schema 變更。**

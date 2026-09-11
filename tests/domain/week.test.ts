@@ -5,6 +5,8 @@ import {
   shiftIsoDate,
   daysBetween,
   formatWeekGroupTitle,
+  groupByDay,
+  weekdayLabel,
   type WeekStartDay,
 } from '../../src/domain/week'
 import { toIsoDate, type IsoDate } from '../../src/domain/iso-date'
@@ -236,5 +238,55 @@ describe('T7.4 — 週分組標題文案（formatWeekGroupTitle，Phase 9 新增
     const group = { start: d('2026-08-17'), end: d('2026-08-23') }
     const title = formatWeekGroupTitle(group, 1, new Date(2026, 8, 3, 12, 0))
     expect(title).not.toMatch(/\d{4}-\d{2}-\d{2}/)
+  })
+})
+
+/**
+ * 每日分組與星期幾標籤——使用者實際旅行記帳的回饋後補上（非 TESTCASES.md 契約項目）：
+ * 「total 模式的旅行錢包」希望在週分組底下再看到「這一天花了多少」，
+ * 不用自己把整週的交易逐筆加總。groupByDay 是通用工具，跟 groupByWeek 平行，
+ * 不含任何 budgetMode 相關邏輯（那是 UI 層的呈現選擇，domain 只負責分組）。
+ */
+describe('groupByDay（依日分組，使用者回饋後新增）', () => {
+  interface Tx {
+    date: IsoDate
+  }
+  const tx = (iso: string): Tx => ({ date: d(iso) })
+  const getDate = (t: Tx) => t.date
+
+  it('同一週內跨 3 天的交易，分成 3 組，組間依日期倒序（最新的日子在前）', () => {
+    const items = [tx('2026-09-07'), tx('2026-09-08'), tx('2026-09-07'), tx('2026-09-09')]
+    const groups = groupByDay(items, getDate)
+    expect(groups.map((g) => g.date)).toEqual([d('2026-09-09'), d('2026-09-08'), d('2026-09-07')])
+    expect(groups.find((g) => g.date === d('2026-09-07'))?.items).toHaveLength(2)
+  })
+
+  it('空清單回傳空陣列，不拋錯', () => {
+    expect(groupByDay([], getDate)).toEqual([])
+  })
+
+  it('全部同一天，回傳 1 組，包含全部項目', () => {
+    const items = [tx('2026-09-08'), tx('2026-09-08'), tx('2026-09-08')]
+    const groups = groupByDay(items, getDate)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.items).toHaveLength(3)
+  })
+})
+
+describe('weekdayLabel（星期幾中文標籤，使用者回饋後新增）', () => {
+  it('2026-09-08 是週二', () => {
+    expect(weekdayLabel(d('2026-09-08'))).toBe('週二')
+  })
+
+  it('2026-09-07 是週一', () => {
+    expect(weekdayLabel(d('2026-09-07'))).toBe('週一')
+  })
+
+  it('2026-09-06 是週日', () => {
+    expect(weekdayLabel(d('2026-09-06'))).toBe('週日')
+  })
+
+  it('2026-09-12 是週六', () => {
+    expect(weekdayLabel(d('2026-09-12'))).toBe('週六')
   })
 })

@@ -111,3 +111,38 @@ export function groupByWeek<T>(
   groups.sort((a, b) => compareIsoDate(b.start, a.start))
   return groups
 }
+
+export interface DayGroup<T> {
+  readonly date: IsoDate
+  readonly items: T[]
+}
+
+/**
+ * 依日期分組，組間依日期倒序（最新的日子在前）。使用者實際用 `total` 模式的旅行
+ * 錢包記帳後回饋：週分組底下想再看到「這一天花了多少」，所以這裡補上跟
+ * `groupByWeek` 平行的每日分組工具——純粹依日期分桶，不含任何 budgetMode 邏輯
+ * （那是呼叫端的呈現選擇）。
+ */
+export function groupByDay<T>(items: readonly T[], getDate: (item: T) => IsoDate): DayGroup<T>[] {
+  const groupsByDate = new Map<IsoDate, DayGroup<T>>()
+
+  for (const item of items) {
+    const date = getDate(item)
+    let group = groupsByDate.get(date)
+    if (!group) {
+      group = { date, items: [] }
+      groupsByDate.set(date, group)
+    }
+    group.items.push(item)
+  }
+
+  return [...groupsByDate.values()].sort((a, b) => compareIsoDate(b.date, a.date))
+}
+
+const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'] as const
+
+/** IsoDate 對應的星期幾中文標籤（例如 2026-09-08 → 「週二」），供每日分組標題使用。 */
+export function weekdayLabel(date: IsoDate): string {
+  const dayOfWeek = new Date(isoToUtcMillis(date)).getUTCDay()
+  return WEEKDAY_LABELS[dayOfWeek] as string
+}

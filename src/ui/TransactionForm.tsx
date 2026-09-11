@@ -226,10 +226,19 @@ export default function TransactionForm({ wallet, initial }: TransactionFormProp
         {noteOpen ? (
           <input
             type="text"
+            enterKeyHint="done"
             aria-label="備註"
+            data-testid="transaction-note-input"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-24 rounded-pill bg-track px-3 py-1.5 text-caption text-fg"
+            onKeyDown={(e) => {
+              // 按下鍵盤的「完成／前往」鍵時收起系統鍵盤，避免鍵盤停留擋住下方的
+              // 金額鍵台與送出鍵（使用者實際回饋：按確定後鍵盤不會自己收起）。
+              if (e.key === 'Enter') {
+                e.currentTarget.blur()
+              }
+            }}
+            className="min-w-0 max-w-[60vw] flex-1 rounded-pill bg-track px-3 py-1.5 text-caption text-fg"
           />
         ) : (
           <button

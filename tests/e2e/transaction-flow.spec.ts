@@ -92,7 +92,8 @@ test.describe('T8.1 — 記帳流程', () => {
     await page.getByRole('button', { name: '昨天' }).click()
     await page.getByRole('button', { name: '記一筆' }).click()
 
-    await expect(page.getByTestId('transaction-item').first()).toContainText('9/2')
+    // 日期分組標題（見 tests/e2e/daily-subtotal.spec.ts 的說明）現在是交易日期唯一的顯示位置。
+    await expect(page.getByTestId('day-group-header').first()).toContainText('9/2')
   })
 
   test('T8.1.7 — 記帳頁全程不會把焦點放在文字輸入框（不呼叫系統鍵盤）', async ({ page }) => {
