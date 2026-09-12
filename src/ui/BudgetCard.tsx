@@ -11,13 +11,10 @@ import { Money, format, percentOf, subtract } from '../domain/money'
 /**
  * 首頁預算卡（UI-SPEC.md §4.2）。從 Home.tsx 抽出（Phase 10）。
  *
- * 「還有 {n} 天」／「日均可用」這兩行，UI-SPEC.md §4.2 的文字沒有依 budgetMode
- * 區分 weekly／total（只有標籤文字第 1 項與進度條第 3 項有明講差異）。
- * `total` 模式的預算本身「不受週期影響」（SPEC.md §3.4），並沒有一個會結束的
- * 「本週」概念，但這裡仍統一用 daysLeftInWeek／dailyAllowance 顯示「本週還有
- * 幾天、照這個速度本週每天還能花多少」——當作不隨模式而變的節奏參考值，而不是
- *「這筆總預算會在 n 天後歸零」的意思。這是 UI-SPEC.md 文字沒有明講、需要人類
- * 確認的解讀，已記錄在 PR 的「需要人類決策」。
+ * 「還有 {n} 天」／「日均可用」這兩行只在 `weekly` 模式顯示——`total` 模式的
+ * 預算「不受週期影響」（SPEC.md §3.4），沒有「本週」這個框架，顯示以週為基準
+ * 的天數／日均可用容易誤導使用者以為總預算會在那天歸零。這是 PR #13 review
+ * 時人類明確做的決定（原本兩種模式統一顯示是待確認事項，已確認拿掉）。
  */
 export default function BudgetCard() {
   const wallet = useAppStore(selectCurrentWallet)
@@ -45,8 +42,9 @@ export default function BudgetCard() {
   let isOverBudget: boolean
   let label: string
   let balanceTestId: string
+  const isWeekly = wallet.budgetMode === 'weekly'
 
-  if (wallet.budgetMode === 'weekly') {
+  if (isWeekly) {
     const result = calculateWeeklyBalance(wallet, transactions, weekStartDay, now)
     if (!result || wallet.budgetAmount === null) return null
     budget = Money.of(wallet.budgetAmount, wallet.currency)
@@ -68,8 +66,6 @@ export default function BudgetCard() {
   }
 
   const usedPercent = Math.min(100, percentOf(spent, budget))
-  const daysLeft = daysLeftInWeek(weekStartDay, now)
-  const allowance = dailyAllowance(balance, daysLeft)
   const balanceColorClass = isOverBudget ? 'text-danger' : 'text-fg'
   const barColorClass = isOverBudget ? 'bg-danger' : 'bg-accent'
 
@@ -99,15 +95,17 @@ export default function BudgetCard() {
         <span data-testid="budget-used-text">
           已用 {format(spent)} / {format(budget)}
         </span>
-        <span data-testid="budget-days-left">還有 {daysLeft} 天</span>
+        {isWeekly && <span data-testid="budget-days-left">還有 {daysLeftInWeek(weekStartDay, now)} 天</span>}
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-sep pt-3">
-        <span className="text-caption text-fg2">日均可用</span>
-        <span data-testid="budget-daily-allowance" className="text-[15px] font-medium text-fg">
-          {format(allowance)}
-        </span>
-      </div>
+      {isWeekly && (
+        <div className="mt-3 flex items-center justify-between border-t border-sep pt-3">
+          <span className="text-caption text-fg2">日均可用</span>
+          <span data-testid="budget-daily-allowance" className="text-[15px] font-medium text-fg">
+            {format(dailyAllowance(balance, daysLeftInWeek(weekStartDay, now)))}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
