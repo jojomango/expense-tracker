@@ -21,7 +21,7 @@
 | 7 | PWA、備份與打磨 | ✅ DONE | [#9](https://github.com/jojomango/expense-tracker/pull/9) |
 | 8 | UI 地基與導覽 | ✅ DONE | [#10](https://github.com/jojomango/expense-tracker/pull/10) |
 | 9 | 記帳流程 | ✅ DONE | [#11](https://github.com/jojomango/expense-tracker/pull/11) |
-| 10 | 資訊呈現與分類固定色 | **NEXT** | |
+| 10 | 資訊呈現與分類固定色 | ✅ DONE | （待補：PR 建立後另開一個小 commit 補上連結，照先前 phase 的慣例） |
 
 ---
 
@@ -1216,7 +1216,7 @@ Dexie 的 `toCollection().toArray()`）的順序等同資料庫內部主鍵（`i
 
 ---
 
-## Phase 10 — 資訊呈現與分類固定色 **NEXT**
+## Phase 10 — 資訊呈現與分類固定色 ✅ DONE
 
 **目標:** 預算卡與圖表補上脈絡,分類色綁到分類本身。**這個 phase 有 schema 變更。**
 
@@ -1234,10 +1234,12 @@ Dexie 的 `toCollection().toArray()`）的順序等同資料庫內部主鍵（`i
 
 **驗收**
 
-- 同一分類在本週與本月、在圓環與列表中顏色一致
-- 趨勢圖 8 個週別標籤可見且對齊柱子
-- 匯入 v1 備份不會壞,分類自動補色
-- 對應測案 T7.5、T7.6、T7.7、T8.3 全綠;`npm run verify` + `npm run e2e` 全綠
+- [x] 同一分類在本週與本月、在圓環與列表中顏色一致
+- [x] 趨勢圖 8 個週別標籤可見且對齊柱子
+- [x] 匯入 v1 備份不會壞,分類自動補色
+- [x] 對應測案 T7.5、T7.6、T7.7、T8.3 全綠;`npm run verify` + `npm run e2e`（Chromium）全綠
+      （T7.1、T7.2 沿用 Phase 8 已完成的 `daysLeftInWeek`／`dailyAllowance`，這個
+      phase 沒有重寫，見下方交接筆記）
 
 **刻意不做**
 
@@ -1250,6 +1252,158 @@ Dexie 的 `toCollection().toArray()`）的順序等同資料庫內部主鍵（`i
 - 三個 phase 都不需要新套件。圖表手寫 SVG、左滑用 Pointer Events、動畫用 CSS transition
 - Phase 8 的分頁列與 sheet 是後兩個 phase 的地基,先把它做穩,不要順手改內容
 
+### 完成記錄（Phase 10 實際執行，給下一次 session 的你）
+
+上面那段是 Phase 7 寫給 Phase 8 的交接筆記（一次寫給 8/9/10 三個 phase），
+以下是 Phase 10 真正做完後的記錄。**目前 TASKS.md 沒有 Phase 11——SPEC.md §6
+與這次追加的 UI 改版三個 phase（8/9/10）到這裡全部做完了。** 是否要開新的
+phase（例如自訂幣別 D6、Categories.tsx 管理頁跟進分類色與按鈕樣式統一、
+mobile-chrome 專案的完整 e2e 驗證）需要人類決定，見下方「待人類決策的問題」。
+
+**產出：**
+
+- `src/domain/category.ts`：`Category`／`DefaultCategorySeed` 加 `color: string`；
+  新增 `FALLBACK_CATEGORY_COLOR`（`#7a7a80`）與 `seedColorFor(name, type)`；
+  `validateCategory` 新增 `#rrggbb`（大小寫皆可、不接受三位縮寫）驗證；
+  `DEFAULT_EXPENSE_CATEGORIES`／`DEFAULT_INCOME_CATEGORIES` 補上 UI-SPEC.md
+  §2.2 的色值。T7.5、T7.6 共 13 個新測試（`tests/domain/category.test.ts`、
+  `tests/domain/budget.test.ts`）。
+- `src/persistence/db.ts`：Dexie `version(2).upgrade()`，用 `seedColorFor` 幫
+  既有分類補 `color`（找不到種子色的自建分類補 fallback）。
+  `tests/persistence/migration.test.ts` 的 T4.1.5 骨架換成三個真正的 T7.7.1～
+  T7.7.3 測試（獨立宣告 v1 schema 的 Dexie 寫入資料 → 用真正的 `AppDatabase`
+  開啟同一個資料庫名稱驗證升級結果），照骨架註解說的「換成針對真實欄位轉換
+  的測試」做了。
+- `src/domain/backup.ts`：`validateBackupData` 在驗證分類之前，先把
+  `typeof color !== 'string'` 的分類物件補上 `seedColorFor(name, type)`
+  的顏色，再送進 `validateCategory`——這樣 Phase 9 以前存的舊備份檔（分類
+  沒有 `color` 欄位）匯入時不會被拒絕（T7.7.4）。**`BACKUP_SCHEMA_VERSION`
+  刻意沒有跟著調成 2**：這次只是替既有實體型別新增一個欄位、匯入時可以
+  安全地用預設值回填，不是像 Dexie 那樣需要一個新的「schema 版本」概念去
+  觸發升級流程；`BACKUP_SCHEMA_VERSION` 存在的意義是「這個 app 讀不讀得懂
+  這包 JSON 的整體結構」，欄位級的新增用回填處理更單純，也不會讓舊版 app
+  誤判匯出檔「版本比較新」而拒絕匯入（T4.2.2 的邏輯是「比目前支援的新才拒絕」，
+  沒必要為了這次的欄位新增去動它）。匯出必定包含 `color`（T7.7.5，因為
+  `Category` 型別本身已要求該欄位，序列化時自然帶上，沒有另外寫程式碼）。
+- `src/ui/CategoryForm.tsx`：新增顏色色票選擇器，`CATEGORY_COLOR_SWATCHES`
+  匯出 10 個不重複色值。**UI-SPEC.md §2.2 的表格有 11 列，但「其他（支出）」
+  與「其他（收入）」兩列都是同一個 fallback 色 `#7a7a80`**——色票只需要呈現
+  使用者可以區分的顏色選項，把同一個顏色重複畫成兩顆看起來一樣的按鈕沒有
+  意義，所以這裡做了去重（10 個視覺上不同的色票）。這是我對「11 色色票」
+  字面敘述的解讀，不是規格矛盾（表格本身沒有要求色票必須剛好 11 顆按鈕），
+  但列進 PR 的「需要人類決策」供確認。色票按鈕本身是 44×44 的可點區域
+  （UI-SPEC.md §1.2／§9），視覺色圈用內層 30×30 的 `<span>` 呈現。
+- 新增 `src/ui/BudgetCard.tsx`，從 `Home.tsx` 抽出，取代原本的 `BalanceCard`／
+  `OverBudgetNotice`：標籤、大字餘額、超支時整段變色 + 「已超支」文字標籤
+  （`data-testid="over-budget-label"`，**沒有 emoji**，UI-SPEC.md §4.2 明講
+  「不用 emoji ⚠️」，取代 Phase 5 的 `over-budget-icon`）、進度條
+  （`data-testid="budget-progress-bar"`、`data-percent` 屬性方便測試讀值，
+  上限 100%）、「已用 {支出金額} / {預算金額}」與「還有 {n} 天」、上邊框
+  分隔的「日均可用」列。`weekly`／`total` 兩種模式共用同一份佈局；`none`
+  模式維持原本「本週支出」的簡單顯示（沒有進度條／已用／日均可用，這些
+  概念在沒有預算時不成立）。
+- `src/ui/Stats.tsx` 整個重寫：`PIE_COLORS` 拿掉，圓環每個分類的顏色改讀
+  `category.color`（`categoryId === null` 用 `FALLBACK_CATEGORY_COLOR`）；
+  圓環中心用絕對定位的 HTML `<div>` 疊「{本週｜本月}支出」+ 期間總額
+  （`data-testid="donut-total"`），不是 SVG `<text>`；圖例文字與金額都加
+  `whitespace-nowrap`，並在每項下方加一條 4px 的分類色進度條；趨勢圖用
+  `<line>` 畫平均虛線（`style="stroke: var(--color-fg3)"`，照 UI-SPEC.md
+  §6 特別提醒的「用 style 而非 stroke 屬性，CSS 變數在 presentation
+  attribute 裡不解析」）、當週柱用 `accent`（其餘用新增的 `--color-trend-bar`
+  token）、週別標籤改成 HTML `grid-cols-8`（`data-testid="weekly-trend-label"`）
+  取代原本的 4 欄文字圖例，柱體與標籤共用同一個總寬度（`w-full`）與相同的
+  等分邏輯（8 根柱在 320 寬的 viewBox 裡等寬排列、標籤用 8 等份的 grid），
+  兩者的中心點天然對齊。
+- `src/ui/CategoryGrid.tsx`／`src/ui/TransactionList.tsx`：分類色塊改用
+  `category.color` 的淡色 tint（新增 `src/index.css` 的 `.cat-tint` 工具
+  class，用 `color-mix(in srgb, var(--cat) 12%/18%, transparent)`，
+  `--cat` 由元件 inline style 逐一設定成該分類的 color；light/dark 兩種
+  透明度靠 `.dark .cat-tint` override，不必幫每個分類各寫一份 dark
+  variant）。`CategoryGrid` 的選取態外框從固定的 `accent` 改成
+  `box-shadow: 0 0 0 2.5px {分類色}`（UI-SPEC.md §5 原文），這是 Phase 9
+  交接筆記就預告要在這個 phase 換掉的簡化點。
+- 新增 4 個 T8.3.4～T8.3.7 e2e 測試（`tests/e2e/ui-foundation.spec.ts`）：
+  圓環中心總額、趨勢圖標籤與柱子對齊（< 4px）、切換期間後圖例顏色不變、
+  統計頁分段控制與分類色票的可點區域 ≥ 44×44px。
+
+**修改既有測試（appearance 變更，非弱化——理由與對照見下方）：**
+
+- `tests/e2e/budget-balance.spec.ts` E2E-3：拿掉 `getByTestId('over-budget-icon')`
+  的斷言（emoji 警示圖示已被 UI-SPEC.md §4.2 明確禁止），改斷言新的
+  `over-budget-label`；`text-red-600` 的 class 斷言改成 `text-danger`
+  （設計 token 名稱本身換了，不是顏色語意變了）。
+- 同檔 E2E-4：「已用 4%」文字斷言改成 `budget-used-text` 的
+  「已用 ¥8,000 / ¥200,000」（金額對照，UI-SPEC.md §4.2 的格式）+
+  `budget-progress-bar` 的 `data-percent="4"` 屬性斷言（percent 數值本身
+  的驗證沒有被拿掉，只是換了呈現位置：從一段文字換成進度條的資料屬性）。
+
+這兩處修改的依據是 UI-SPEC.md 檔首那句「牴觸時以 SPEC.md 為準（例如 §3
+的資料規則），但外觀一律以本檔為準」——這兩個舊測案斷言的都是「外觀」
+（要不要用 emoji、百分比要不要顯示成文字），UI-SPEC.md 對此有明確、具體
+的新規定，所以照 UI-SPEC.md 更新測試實作，而不是停下來當成規格矛盾。
+但仍然列進 PR 的「需要人類決策」，因為這是我對「牴觸時以 UI-SPEC 為準」
+這句話的引用範圍所做的判斷，不是 100%無爭議。
+
+**其他設計決策：**
+
+- **T7.1／T7.2（`daysLeftInWeek`／`dailyAllowance`）這個 phase 完全沒有
+  新增程式碼**——上面 Phase 8 的交接筆記已經寫了這兩個函式是「Phase 8 新增」，
+  這次讀 `src/domain/budget.ts` 才發現函式本體與測試都已經存在（`TASKS.md`
+  Phase 10 的「要做的事」清單是 SPEC 撰寫時的舊版任務分配，沒有跟著 Phase 8
+  的實際進度更新）。這不是規格矛盾，純粹是 `TASKS.md` 本身的任務清單過期，
+  這個 phase 直接沿用既有實作，`BudgetCard.tsx` 呼叫這兩個函式即可。
+- **`BudgetCard` 的「還有 {n} 天」／「日均可用」兩行,`weekly` 與 `total`
+  模式共用同一套算法（都用 `daysLeftInWeek`／`dailyAllowance`，以「本週」
+  為基準）。** UI-SPEC.md §4.2 的條列文字（項目 4、5）沒有像項目 1、3 那樣
+  註明依 `budgetMode` 不同而有差異，字面上看起來是兩種模式都要顯示這兩行。
+  但 SPEC.md §3.4 明講 `total` 模式「不受週期影響」——一個沒有週期的預算，
+  「這週還有幾天」「這週每天還能花多少」在概念上比較像是「參考性的節奏
+  提示」而不是「這筆預算剩幾天用完」。我選擇兩種模式都顯示（字面上更貼近
+  UI-SPEC.md 沒有例外的寫法），但**這是我對兩份文件之間沒有明講的落差做的
+  判斷，已列進 PR 的「需要人類決策」**，如果人類覺得 `total` 模式不該顯示
+  這兩行、或該用別的基準（例如錢包建立至今的天數），改動只在 `BudgetCard.tsx`
+  的 `total` 分支，不影響 domain 層。
+- `subtract(budget, balance)` 用來從 `calculateTotalBalance` 的回傳值反推
+  已花費金額（`spent`），沒有新增 domain 函式——`balance = budget − spent`
+  是 `budget.ts` 內部本來就有的算法，反推比新增一個「總支出」的 domain
+  函式更省事，且沒有引入新的資料流。
+- Dexie v2 的 `upgrade()` 裡對 `modify()` 拿到的分類記錄做了型別逃逸
+  （`c as { color?: string }`），因為 `Category` 介面本身是 `readonly`
+  且欄位齊全，但 migration 當下的記錄可能還沒有 `color`。這是
+  `MIGRATION-category-color.md` §5 就預告要這樣做的手法，註解已經寫明
+  「型別逃逸僅限這個 migration 補欄位的場合，不代表 Category 介面本身可變」。
+
+**已知但不影響本 phase 驗收的坑（留給下一個 phase 或人類決定）：**
+
+- **`Categories.tsx`（分類管理清單頁）沒有套用分類色**——清單項目仍然只顯示
+  emoji + 名稱的純文字列表，沒有色塊。這不在 Phase 10「要做的事」清單內
+  （只列了 `CategoryForm.tsx` 的顏色選擇器），Phase 9 交接筆記也提過
+  `Categories.tsx` 的按鈕樣式（底線文字連結）沒有跟進整體視覺語言——這兩件
+  事可以一起排進下一輪打磨。
+- **`npm run e2e` 這次只在本機驗證了 `chromium` 專案**（沙盒的 Playwright
+  executable 版本落差，見 Phase 1 交接筆記提過的 workaround：未提交的
+  `playwright.local.config.ts` 指定 `executablePath`，驗完已刪除）。
+  `mobile-chrome` 專案（Pixel 7 viewport）沒有在本機跑過這次新增／修改的
+  測試，CI 上因為會自己 `playwright install`，兩個專案都會正常執行——但
+  誠實記錄：這次的人工驗證沒有涵蓋 mobile-chrome，理論上圓環／趨勢圖在
+  更窄的螢幕寬度下對齊計算（T8.3.5 的 < 4px 門檻）風險最高，若 CI 上
+  mobile-chrome 意外失敗，第一個該懷疑的地方是這裡。
+- **自訂幣別小數位數（SPEC.md §7 D6）仍未解決**——從 Phase 1 開始每個 phase
+  都提醒一次，這個 phase 一樣沒碰，`WalletForm` 幣別下拉仍只列 20 種內建
+  幣別，這顆坑目前仍是被 UI 擋住、不是被解決。
+
+**需要人類決策的事項（同時已寫進本次 PR 描述）：**
+
+1. `CATEGORY_COLOR_SWATCHES` 去重成 10 個不重複色值（UI-SPEC.md §2.2 表格
+   字面是 11 列，但兩列色值相同）——是否要照字面呈現 11 顆色票（含視覺上
+   看起來重複的兩顆），還是目前的去重版本才是預期行為？
+2. `BudgetCard` 的「還有 n 天」／「日均可用」是否該對 `total` 模式的錢包
+   顯示（該模式的預算「不受週期影響」，沒有自然的週期終點）？目前兩種模式
+   統一顯示、統一以「本週」為基準。
+3. `budget-balance.spec.ts` E2E-3／E2E-4 的斷言因 UI-SPEC.md 的外觀規格
+   改版而更新（拿掉 emoji 警示圖示的斷言、「已用 4%」文字斷言改為金額對照
+   + 進度條 data 屬性）——確認這個調整方向沒有問題。
+
 ---
 
 ## 待人類決策的問題
@@ -1257,7 +1411,29 @@ Dexie 的 `toCollection().toArray()`）的順序等同資料庫內部主鍵（`i
 > Agent 發現規格矛盾或需要批准時，寫在這裡，並同時寫進 PR 描述。
 > 人類回覆後會把該項移除。
 
-_（目前無）_
+### Phase 10：三個需要人類確認的判斷（皆非規格矛盾，不阻塞驗收）
+
+1. **分類色票去重**：`UI-SPEC.md` §2.2 表格列了 11 個分類、但其中「其他（支出）」
+   與「其他（收入）」兩列色值相同（都是 fallback 色 `#7a7a80`）。
+   `CategoryForm.tsx` 的色票選擇器目前只呈現 10 個不重複的顏色（去掉視覺上
+   會重複的那一顆），而不是字面上的 11 顆按鈕。是否要改成呈現 11 顆
+   （其中兩顆看起來一樣）？還是目前的做法才是預期行為？
+2. **`BudgetCard` 的「還有 n 天」／「日均可用」是否該套用在 `total` 模式**：
+   `SPEC.md` §3.4 講 `total` 預算「不受週期影響」，沒有自然的週期終點，但
+   `UI-SPEC.md` §4.2 的版面條列沒有為這兩行標註「僅限 weekly」。目前兩種
+   模式統一顯示、統一以「本週」為基準（當作節奏參考，不是「這筆預算會在
+   n 天後歸零」的意思）。如果人類覺得 `total` 模式不該顯示這兩行、或該用
+   別的基準，請告知，改動範圍只在 `BudgetCard.tsx`。
+3. **舊 E2E 測案因 UI-SPEC.md 外觀規格改版而調整斷言方式**：
+   `tests/e2e/budget-balance.spec.ts` 的 E2E-3 拿掉了「emoji 警示圖示」的
+   斷言（UI-SPEC.md §4.2 明確要求不用 emoji，改用文字標籤）；E2E-4 的
+   「已用 4%」文字斷言改成「已用 {金額} / {金額}」+ 進度條 `data-percent`
+   屬性（UI-SPEC.md §4.2 的格式是金額對照，不是百分比文字）。這是我依
+   `UI-SPEC.md` 檔首「牴觸時外觀一律以本檔為準」的原則做的調整，測案驗證的
+   底層邏輯（超支要有視覺警示、已用比例要能被驗證）沒有被拿掉，只是換了
+   呈現與斷言方式，但請確認這個調整方向沒有問題。
+
+詳見本次 PR 描述的「需要人類決策」段落與 TASKS.md Phase 10 交接筆記。
 
 ### ✅ 已解決：Phase 6：TESTCASES.md 缺少分類管理／統計圖表的 E2E 契約
 

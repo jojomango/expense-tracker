@@ -12,7 +12,7 @@ import Dexie, { type Table } from 'dexie'
 import type { Wallet } from '../domain/wallet'
 import type { Transaction } from '../domain/transaction'
 import type { Category } from '../domain/category'
-import { DEFAULT_CATEGORIES } from '../domain/category'
+import { DEFAULT_CATEGORIES, seedColorFor } from '../domain/category'
 import type { Settings } from '../domain/settings'
 import { DEFAULT_SETTINGS } from '../domain/settings'
 
@@ -38,6 +38,30 @@ export class AppDatabase extends Dexie {
       categories: 'id, type',
       settingsTable: 'id',
     })
+
+    // v2：分類新增固定色（UI-SPEC.md §2.2，MIGRATION-category-color.md）。
+    // color 不查詢，索引字串跟 v1 相同——這個 version 存在的唯一目的是補
+    // 既有分類的 color 欄位。
+    this.version(2)
+      .stores({
+        wallets: 'id, archived',
+        transactions: 'id, walletId, categoryId, date',
+        categories: 'id, type',
+        settingsTable: 'id',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<Category>('categories')
+          .toCollection()
+          .modify((c) => {
+            // Category 介面本身是 readonly，但這裡的 c 是 Dexie modify() 給的
+            // 可變資料庫記錄快照，不是型別意義上的 Category 值——型別逃逸僅限
+            // 這個 migration 補欄位的場合使用，不代表 Category 介面本身可變。
+            if (typeof (c as { color?: string }).color !== 'string') {
+              ;(c as { color: string }).color = seedColorFor(c.name, c.type)
+            }
+          })
+      })
 
     this.on('populate', () => this.seedDefaults())
   }

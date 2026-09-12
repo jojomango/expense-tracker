@@ -64,7 +64,7 @@ interface AppState {
 
   updateSettings: (patch: Partial<Settings>) => Promise<void>
 
-  addCategory: (input: { name: string; type: CategoryType; icon: string }) => Promise<void>
+  addCategory: (input: { name: string; type: CategoryType; icon: string; color: string }) => Promise<void>
   updateCategory: (category: Category) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
 
@@ -214,6 +214,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       name: input.name,
       type: input.type,
       icon: input.icon,
+      color: input.color,
       isDefault: false,
     }
     validateCategory(category)

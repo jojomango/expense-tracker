@@ -1,8 +1,8 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../app/store'
 import type { Transaction } from '../domain/transaction'
-import type { Category } from '../domain/category'
+import { FALLBACK_CATEGORY_COLOR, type Category } from '../domain/category'
 import type { Wallet } from '../domain/wallet'
 import { Money, format } from '../domain/money'
 import { compareIsoDate } from '../domain/iso-date'
@@ -32,10 +32,15 @@ const DRAG_CLAMP = -96
 const OPEN_THRESHOLD = -44
 const TAP_THRESHOLD = 5
 
-function categoryOf(categories: Category[], categoryId: string | null): { icon: string; name: string } {
-  if (categoryId === null) return { icon: FALLBACK_ICON, name: FALLBACK_NAME }
+function categoryOf(
+  categories: Category[],
+  categoryId: string | null,
+): { icon: string; name: string; color: string } {
+  if (categoryId === null) return { icon: FALLBACK_ICON, name: FALLBACK_NAME, color: FALLBACK_CATEGORY_COLOR }
   const category = categories.find((c) => c.id === categoryId)
-  return category ? { icon: category.icon, name: category.name } : { icon: FALLBACK_ICON, name: FALLBACK_NAME }
+  return category
+    ? { icon: category.icon, name: category.name, color: category.color }
+    : { icon: FALLBACK_ICON, name: FALLBACK_NAME, color: FALLBACK_CATEGORY_COLOR }
 }
 
 /** 週內依日期新到舊排序（groupByWeek 本身回傳日期正序，見 week.ts 交接筆記）。 */
@@ -74,7 +79,7 @@ function TransactionRow({
   onDeleteRequested,
 }: TransactionRowProps) {
   const navigate = useNavigate()
-  const { icon, name } = categoryOf(categories, transaction.categoryId)
+  const { icon, name, color } = categoryOf(categories, transaction.categoryId)
   const [dragOffset, setDragOffset] = useState<number | null>(null)
   const startRef = useRef<{ x: number; base: number } | null>(null)
 
@@ -142,7 +147,8 @@ function TransactionRow({
         className="flex min-h-11 items-center gap-3 bg-card px-[14px] py-[11px]"
       >
         <span
-          className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-chip bg-track text-[19px]"
+          className="cat-tint flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-chip text-[19px]"
+          style={{ '--cat': color } as CSSProperties}
           aria-hidden="true"
         >
           {icon}
