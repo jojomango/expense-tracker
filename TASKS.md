@@ -21,7 +21,7 @@
 | 7 | PWA、備份與打磨 | ✅ DONE | [#9](https://github.com/jojomango/expense-tracker/pull/9) |
 | 8 | UI 地基與導覽 | ✅ DONE | [#10](https://github.com/jojomango/expense-tracker/pull/10) |
 | 9 | 記帳流程 | ✅ DONE | [#11](https://github.com/jojomango/expense-tracker/pull/11) |
-| 10 | 資訊呈現與分類固定色 | ✅ DONE | （待補：PR 建立後另開一個小 commit 補上連結，照先前 phase 的慣例） |
+| 10 | 資訊呈現與分類固定色 | ✅ DONE | [#13](https://github.com/jojomango/expense-tracker/pull/13) |
 
 ---
 
