@@ -42,6 +42,7 @@ describe('CategoryRepository — 刪除分類時交易轉移到未分類（SPEC.
       name: '自訂分類',
       type: 'expense',
       icon: '⭐',
+      color: '#7a7a80',
       isDefault: false,
     }
     await repos.categories.add(customCategory)

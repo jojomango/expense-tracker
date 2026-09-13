@@ -11,6 +11,8 @@ import {
 import { Money } from '../../src/domain/money'
 import type { Wallet } from '../../src/domain/wallet'
 import type { Transaction } from '../../src/domain/transaction'
+import type { Category } from '../../src/domain/category'
+import { FALLBACK_CATEGORY_COLOR } from '../../src/domain/category'
 import { toIsoDate, type IsoDate } from '../../src/domain/iso-date'
 import type { WeekStartDay } from '../../src/domain/week'
 
@@ -283,6 +285,55 @@ describe('T3.5 — 分類彙總', () => {
 
   it('T3.5.4 — 空清單，回傳空陣列，佔比計算不 crash', () => {
     expect(summarizeByCategory([])).toEqual([])
+  })
+})
+
+describe('T7.6 — 分類色穩定性（Phase 10 新增）', () => {
+  const categories: Category[] = [
+    { id: 'food', name: '飲食', type: 'expense', icon: '🍜', color: '#c1502e', isDefault: true },
+    { id: 'transport', name: '交通', type: 'expense', icon: '🚗', color: '#3f8f6a', isDefault: true },
+    { id: 'shopping', name: '購物', type: 'expense', icon: '🛒', color: '#2f6f9f', isDefault: true },
+  ]
+
+  function colorOf(categoryId: string | null): string {
+    if (categoryId === null) return FALLBACK_CATEGORY_COLOR
+    return categories.find((c) => c.id === categoryId)?.color ?? FALLBACK_CATEGORY_COLOR
+  }
+
+  it('T7.6.1 — 同一分類在本週彙總為第 1 名、在本月彙總為第 3 名，兩次取得的顏色相同', () => {
+    // 本週：food 最高（排第 1）。
+    const weekly = summarizeByCategory([
+      tx({ walletId: 'w1', type: 'expense', amount: 5000, categoryId: 'food', date: d('2026-08-11') }),
+      tx({ walletId: 'w1', type: 'expense', amount: 1000, categoryId: 'transport', date: d('2026-08-11') }),
+      tx({ walletId: 'w1', type: 'expense', amount: 500, categoryId: 'shopping', date: d('2026-08-11') }),
+    ])
+    // 本月：food 最低（排第 3）——同一份交易之外再疊加大量 transport／shopping 支出。
+    const monthly = summarizeByCategory([
+      tx({ walletId: 'w1', type: 'expense', amount: 5000, categoryId: 'food', date: d('2026-08-11') }),
+      tx({ walletId: 'w1', type: 'expense', amount: 1000, categoryId: 'transport', date: d('2026-08-11') }),
+      tx({ walletId: 'w1', type: 'expense', amount: 500, categoryId: 'shopping', date: d('2026-08-11') }),
+      tx({ walletId: 'w1', type: 'expense', amount: 20000, categoryId: 'transport', date: d('2026-08-02') }),
+      tx({ walletId: 'w1', type: 'expense', amount: 15000, categoryId: 'shopping', date: d('2026-08-03') }),
+    ])
+
+    expect(weekly[0]?.categoryId).toBe('food')
+    expect(monthly[2]?.categoryId).toBe('food')
+    expect(colorOf(weekly[0]!.categoryId)).toBe(colorOf(monthly[2]!.categoryId))
+    expect(colorOf('food')).toBe('#c1502e')
+  })
+
+  it('T7.6.2 — summarizeByCategory 的回傳不含任何顏色資訊', () => {
+    const result = summarizeByCategory([
+      tx({ walletId: 'w1', type: 'expense', amount: 100, categoryId: 'food', date: d('2026-08-11') }),
+    ])
+    for (const entry of result) {
+      expect(entry).not.toHaveProperty('color')
+    }
+  })
+
+  it('T7.6.3 — categoryId === null（未分類）顏色為 #7a7a80', () => {
+    expect(colorOf(null)).toBe('#7a7a80')
+    expect(FALLBACK_CATEGORY_COLOR).toBe('#7a7a80')
   })
 })
 

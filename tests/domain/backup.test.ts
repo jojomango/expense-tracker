@@ -29,6 +29,7 @@ const category1 = {
   name: '飲食',
   type: 'expense' as const,
   icon: '🍜',
+  color: '#c1502e',
   isDefault: true,
 }
 
@@ -112,6 +113,38 @@ describe('validateBackupData — T4.2.8 交易參照完整性', () => {
   it('categoryId 為 null（未分類）時合法，不視為參照錯誤', () => {
     const data = validBackup({ transactions: [transaction({ categoryId: null })] })
     expect(() => validateBackupData(data)).not.toThrow()
+  })
+})
+
+describe('validateBackupData — T7.7.4／T7.7.5 舊備份分類缺少 color 時自動補色（Phase 10 新增）', () => {
+  it('T7.7.4 — 匯入 v1 格式備份檔（分類物件沒有 color）成功，分類自動補色', () => {
+    // v1 備份檔的分類物件沒有 color 欄位——用 Partial 模擬拿掉這個欄位，
+    // 而不是型別上宣告缺欄位（Category 型別本身已經要求 color 必填）。
+    const { color: _color, ...categoryWithoutColor } = category1
+    const data = {
+      ...validBackup(),
+      categories: [categoryWithoutColor],
+    }
+    const result = validateBackupData(data)
+    expect(result.categories[0]?.color).toBe('#c1502e') // 依名稱＋type 對回 UI-SPEC.md §2.2 的種子色
+  })
+
+  it('T7.7.4 — 使用者自建分類（找不到種子）缺少 color 時補 fallback 色，不拋錯', () => {
+    const { color: _color, ...petWithoutColor } = category1
+    const data = {
+      ...validBackup(),
+      categories: [{ ...petWithoutColor, id: 'c-pet', name: '寵物', isDefault: false }],
+      transactions: [transaction({ categoryId: 'c-pet' })],
+    }
+    const result = validateBackupData(data)
+    expect(result.categories[0]?.color).toBe('#7a7a80')
+  })
+
+  it('T7.7.5 — 匯出的備份分類物件包含 color 欄位', () => {
+    const data = validBackup()
+    const text = serializeBackup(data)
+    const parsed = JSON.parse(text) as BackupData
+    expect(parsed.categories[0]?.color).toBe('#c1502e')
   })
 })
 

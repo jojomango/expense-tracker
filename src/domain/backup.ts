@@ -7,7 +7,7 @@
  */
 import { validateWallet, type Wallet } from './wallet'
 import { validateTransaction, type Transaction } from './transaction'
-import { validateCategory, type Category } from './category'
+import { validateCategory, seedColorFor, type Category, type CategoryType } from './category'
 import { DEFAULT_SETTINGS, type Settings } from './settings'
 
 /** 目前 app 支援讀寫的備份 schema 版本（SPEC.md §3.6）。 */
@@ -94,7 +94,15 @@ export function validateBackupData(data: unknown): BackupData {
   }
 
   const typedWallets = wallets as Wallet[]
-  const typedCategories = categories as Category[]
+  // 舊版（Phase 9 之前）備份檔的分類物件沒有 color 欄位（UI-SPEC.md §2.2 是 Phase 10
+  // 才加的）。匯入時依名稱＋type 補上對應的種子色，找不到（使用者自建分類）就用
+  // fallback 色（MIGRATION-category-color.md §3）——不拋錯，這樣舊備份才能繼續匯入。
+  const typedCategories = categories.map((c) => {
+    if (isPlainObject(c) && typeof c.color !== 'string') {
+      return { ...c, color: seedColorFor(c.name as string, c.type as CategoryType) }
+    }
+    return c
+  }) as Category[]
   const typedTransactions = transactions as Transaction[]
 
   for (const wallet of typedWallets) {

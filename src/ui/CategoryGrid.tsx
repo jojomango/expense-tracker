@@ -1,10 +1,13 @@
+import type { CSSProperties } from 'react'
 import { sortCategoriesForDisplay, type Category, type CategoryType } from '../domain/category'
 
 /**
  * 記帳頁的分類網格（UI-SPEC.md §5）：4 欄，取代原生 `<select>`（T8.1.3、§9 驗收）。
  *
- * 刻意不做（Phase 9 TASKS.md「刻意不做」）：分類固定色是 Phase 10 的範圍，
- * 這裡的色塊一律用單一 `track` 底色，不要臨時發明配色；選取態改用 `accent` 外框。
+ * Phase 10 接上分類固定色：色塊底色是 `category.color` 的淡色 tint
+ * （`.cat-tint`，見 index.css），選取態外框也改用該分類的顏色本身
+ * （UI-SPEC.md §5：`box-shadow: 0 0 0 2.5px {分類色}`），取代 Phase 9 暫時
+ * 簡化用的固定 `accent` 外框。
  */
 interface CategoryGridProps {
   categories: Category[]
@@ -31,9 +34,10 @@ export default function CategoryGrid({ categories, type, selectedId, onSelect }:
             className="flex flex-col items-center gap-1"
           >
             <span
-              className={`flex h-[50px] w-[50px] items-center justify-center rounded-chip bg-track text-[22px] ${
-                selected ? 'shadow-[0_0_0_2.5px_var(--color-accent)]' : ''
+              className={`cat-tint flex h-[50px] w-[50px] items-center justify-center rounded-chip text-[22px] ${
+                selected ? 'shadow-[0_0_0_2.5px_var(--cat)]' : ''
               }`}
+              style={{ '--cat': category.color } as CSSProperties}
               aria-hidden="true"
             >
               {category.icon}

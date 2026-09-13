@@ -46,17 +46,25 @@ async function goHome(page: Page) {
   await page.getByRole('link', { name: '首頁' }).click()
 }
 
-test('E2E-3 — 超支警示：紅色樣式、警示圖示與已超支標示', async ({ page }) => {
+test('E2E-3 — 超支警示：danger 樣式與已超支標示（UI-SPEC.md §4.2：不用 emoji 警示圖示）', async ({
+  page,
+}) => {
   await createFirstWallet(page)
   await addExpense(page, '2900')
   await expect(page.getByTestId('weekly-balance')).toHaveText('NT$100.00')
+  await expect(page.getByTestId('over-budget-label')).toHaveCount(0)
+  // weekly 模式仍要顯示「還有 n 天」／「日均可用」（只有 total 模式拿掉這兩行）。
+  await expect(page.getByTestId('budget-days-left')).toBeVisible()
+  await expect(page.getByTestId('budget-daily-allowance')).toBeVisible()
 
   await addExpense(page, '500')
 
   const balance = page.getByTestId('weekly-balance')
   await expect(balance).toHaveText('-NT$400.00')
-  await expect(balance).toHaveClass(/text-red-600/)
-  await expect(page.getByTestId('over-budget-icon')).toBeVisible()
+  await expect(balance).toHaveClass(/text-danger/)
+  // UI-SPEC.md §4.2 明確要求「不用 emoji ⚠️」，改用 danger 色的「已超支」文字標籤
+  // 取代 Phase 5 的 emoji 警示圖示（見 TASKS.md Phase 10 交接筆記）。
+  await expect(page.getByTestId('over-budget-label')).toBeVisible()
   await expect(page.getByText('已超支')).toBeVisible()
 })
 
@@ -80,7 +88,15 @@ test('E2E-4 — 多錢包與多幣別：餘額互不影響', async ({ page }) =>
 
   await addExpense(page, '8000')
   await expect(page.getByTestId('total-balance')).toHaveText('¥192,000')
-  await expect(page.getByText('已用 4%')).toBeVisible()
+  // UI-SPEC.md §4.2 把「已用」改成 spent/budget 金額對照（不是百分比文字），
+  // 百分比改由進度條寬度（data-percent）呈現——見 TASKS.md Phase 10 交接筆記。
+  await expect(page.getByTestId('budget-used-text')).toHaveText('已用 ¥8,000 / ¥200,000')
+  await expect(page.getByTestId('budget-progress-bar')).toHaveAttribute('data-percent', '4')
+  // total 模式沒有「本週」的框架（SPEC.md §3.4：不受週期影響），「還有 n 天」／
+  // 「日均可用」這兩行只在 weekly 模式顯示——PR #13 review 時人類明確決定拿掉
+  // total 模式的這兩行（原本是待確認事項，見 TASKS.md Phase 10 交接筆記）。
+  await expect(page.getByTestId('budget-days-left')).toHaveCount(0)
+  await expect(page.getByTestId('budget-daily-allowance')).toHaveCount(0)
 
   await goToWalletsManagement(page)
   await page

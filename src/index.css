@@ -23,6 +23,9 @@
   --color-accent: #c1502e;
   --color-danger: #d9463b;
   --color-income: #2f8f63;
+  /* 統計頁趨勢圖：非當週柱的底色（UI-SPEC.md §6，不是 §2.1 的具名 token，
+     只在這裡用到，所以沒有進 tailwind.config.js 的 colors 清單）。 */
+  --color-trend-bar: #d8d4cf;
 }
 
 /* dark 的 accent 比 light 亮一階，因為 #c1502e 在純黑上對比不足（UI-SPEC.md §2.1）。 */
@@ -41,6 +44,7 @@
   --color-accent: #d9673f;
   --color-danger: #e8564a;
   --color-income: #3fa878;
+  --color-trend-bar: #3a3a3c;
 }
 
 html {
@@ -50,6 +54,20 @@ html {
 body {
   -webkit-tap-highlight-color: transparent;
   font-family: theme('fontFamily.sans');
+}
+
+/*
+ * 分類固定色的淡色底（UI-SPEC.md §2.2）：light 12%、dark 18% 透明度。
+ * `--cat` 由使用的元件透過 inline style 逐一設定成該分類的 color，
+ * `color-mix` 讓同一個 class 在深淺色下自動套用不同透明度，不必為每個分類
+ * 各寫一組 dark: variant。
+ */
+.cat-tint {
+  background: color-mix(in srgb, var(--cat) 12%, transparent);
+}
+
+.dark .cat-tint {
+  background: color-mix(in srgb, var(--cat) 18%, transparent);
 }
 
 /* 狀態列 / 分頁列吃掉瀏海與 Home Indicator 的安全區（UI-SPEC.md §2.4）。 */
